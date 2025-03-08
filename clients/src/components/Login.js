@@ -1,13 +1,17 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [darkMode, setDarkMode] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert(`Email: ${email}\nPassword: ${password}`);
+    // Şu an için giriş bilgileri kontrolü yapmadan kullanıcıyı yönlendiriyoruz.
+    localStorage.setItem("isAuthenticated", "true");
+    navigate("/home");
   };
 
   return (
