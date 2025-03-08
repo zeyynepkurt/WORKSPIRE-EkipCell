@@ -9,7 +9,6 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Şu an için giriş bilgileri kontrolü yapmadan kullanıcıyı yönlendiriyoruz.
     localStorage.setItem("isAuthenticated", "true");
     navigate("/home");
   };
@@ -34,7 +33,7 @@ const Login = () => {
 
       <div style={darkMode ? styles.darkCard : styles.lightCard}>
         <h2 style={darkMode ? styles.darkTitle : styles.lightTitle}>Login</h2>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} style={styles.form}>
           <input
             type="email"
             placeholder="Email"
@@ -68,6 +67,7 @@ const styles = {
     backgroundColor: "#fdf6e3",
     transition: "0.3s",
     position: "relative",
+    fontWeight: "bold",
   },
   darkContainer: {
     display: "flex",
@@ -78,6 +78,7 @@ const styles = {
     backgroundColor: "#000033",
     transition: "0.3s",
     position: "relative",
+    fontWeight: "bold",
   },
   lightCard: {
     display: "flex",
@@ -85,15 +86,15 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    padding: "2vw",
+    padding: "3vw",
     borderRadius: "2vw",
     border: "0.3vw solid #0b3d91",
     boxShadow: "0 1vw 2vw rgba(0, 0, 0, 0.2)",
     textAlign: "center",
     width: "30vw",
     minWidth: "300px",
-    height: "60vh",
-    minHeight: "450px",
+    height: "65vh",
+    minHeight: "480px",
     transition: "0.3s",
   },
   darkCard: {
@@ -102,15 +103,15 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#000066",
-    padding: "2vw",
+    padding: "3vw",
     borderRadius: "2vw",
     border: "0.3vw solid #ffcc00",
     boxShadow: "0 1vw 2vw rgba(255, 255, 255, 0.2)",
     textAlign: "center",
     width: "30vw",
     minWidth: "300px",
-    height: "60vh",
-    minHeight: "450px",
+    height: "65vh",
+    minHeight: "480px",
     transition: "0.3s",
   },
   form: {
@@ -118,23 +119,23 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
     width: "100%",
-    gap: "3vh", // Tüm öğeler arasındaki mesafeyi artırıyor
+    gap: "4vh", // Aralığı artırdık
   },
   lightTitle: {
-    marginBottom: "3vh",
+    marginBottom: "4vh",
     fontSize: "3vw",
     color: "#0b3d91",
     textAlign: "center",
   },
   darkTitle: {
-    marginBottom: "3vh",
+    marginBottom: "4vh",
     fontSize: "3vw",
     color: "#ffcc00",
     textAlign: "center",
   },
   lightInput: {
-    width: "80%",
-    padding: "2vh",
+    width: "85%",
+    padding: "2.5vh",
     borderRadius: "1vw",
     border: "0.3vw solid #0b3d91",
     fontSize: "2vw",
@@ -143,10 +144,11 @@ const styles = {
     color: "#333",
     boxSizing: "border-box",
     textAlign: "center",
+    marginBottom: "2vh", // Aralık artırıldı
   },
   darkInput: {
-    width: "80%",
-    padding: "2vh",
+    width: "85%",
+    padding: "2.5vh",
     borderRadius: "1vw",
     border: "0.3vw solid #ffcc00",
     fontSize: "2vw",
@@ -155,10 +157,11 @@ const styles = {
     color: "#000",
     boxSizing: "border-box",
     textAlign: "center",
+    marginBottom: "2vh", // Aralık artırıldı
   },
   lightButton: {
-    width: "80%",
-    padding: "2vh",
+    width: "85%",
+    padding: "2.5vh",
     borderRadius: "1vw",
     border: "none",
     backgroundColor: "#0b3d91",
@@ -169,8 +172,8 @@ const styles = {
     fontWeight: "bold",
   },
   darkButton: {
-    width: "80%",
-    padding: "2vh",
+    width: "85%",
+    padding: "2.5vh",
     borderRadius: "1vw",
     border: "none",
     backgroundColor: "#ffbb00",
