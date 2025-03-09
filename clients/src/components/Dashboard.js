@@ -63,7 +63,7 @@ const Dashboard = () => {
         </button>
         <nav className="mt-12 flex flex-col gap-4 px-6">
           <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" onClick={() => navigate("/home")}>{translations[language].home}</button>
-          <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" disabled>{translations[language].calendar}</button>
+          <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" onClick={() => navigate("/calendar")}>{translations[language].calendar}</button>          
           <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" disabled>{translations[language].pomodoro}</button>
           <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" disabled>{translations[language].scoreboard}</button>
           <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" disabled>{translations[language].game}</button>
