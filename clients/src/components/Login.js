@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -7,10 +8,30 @@ const Login = () => {
   const [darkMode, setDarkMode] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    localStorage.setItem("isAuthenticated", "true");
-    navigate("/home");
+
+    try {
+      const res = await axios.post("http://localhost:5000/login", {
+        email,
+        password,
+      });
+
+      if (res && res.data && res.data.token) {
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("isAuthenticated", "true");
+        navigate("/home");
+      } else {
+        alert("Giriş yapılamadı, beklenmeyen hata.");
+      }
+
+    } catch (error) {
+      if (error.response) {
+        alert(error.response.data.message);
+      } else {
+        alert("Sunucuya bağlanılamıyor.");
+      }
+    }
   };
 
   return (
@@ -50,7 +71,9 @@ const Login = () => {
             required
             style={darkMode ? styles.darkInput : styles.lightInput}
           />
-          <button type="submit" style={darkMode ? styles.darkButton : styles.lightButton}>Login</button>
+          <button type="submit" style={darkMode ? styles.darkButton : styles.lightButton}>
+            Login
+          </button>
         </form>
       </div>
     </div>
@@ -119,7 +142,7 @@ const styles = {
     flexDirection: "column",
     alignItems: "center",
     width: "100%",
-    gap: "4vh", // Aralığı artırdık
+    gap: "4vh",
   },
   lightTitle: {
     marginBottom: "4vh",
@@ -144,7 +167,7 @@ const styles = {
     color: "#333",
     boxSizing: "border-box",
     textAlign: "center",
-    marginBottom: "2vh", // Aralık artırıldı
+    marginBottom: "2vh",
   },
   darkInput: {
     width: "85%",
@@ -157,7 +180,7 @@ const styles = {
     color: "#000",
     boxSizing: "border-box",
     textAlign: "center",
-    marginBottom: "2vh", // Aralık artırıldı
+    marginBottom: "2vh",
   },
   lightButton: {
     width: "85%",
