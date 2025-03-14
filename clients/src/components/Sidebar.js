@@ -50,7 +50,9 @@ const Sidebar = ({ menuOpen, setMenuOpen, darkMode, language }) => {
         <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" disabled>
           {translations[language].game}
         </button>
-        <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" disabled>
+        <button 
+          className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" 
+          onClick={() => { navigate("/team-members"); setMenuOpen(false); }}>
           {translations[language].team}
         </button>
       </nav>
