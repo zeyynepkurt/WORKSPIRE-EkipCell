@@ -10,21 +10,32 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     try {
       const res = await axios.post("http://localhost:5000/login", {
         email,
         password,
       });
-
+  
       if (res && res.data && res.data.token) {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("isAuthenticated", "true");
+        
+        // Kullanıcı bilgilerini kaydet
+        if (res.data.email) {
+          localStorage.setItem("userEmail", res.data.email);
+        }
+        if (res.data.department) {
+          localStorage.setItem("userDepartment", res.data.department);
+        } else {
+          alert("Departman bilgisi alınamadı.");
+        }
+  
         navigate("/home");
       } else {
         alert("Giriş yapılamadı, beklenmeyen hata.");
       }
-
+  
     } catch (error) {
       if (error.response) {
         alert(error.response.data.message);
@@ -33,6 +44,7 @@ const Login = () => {
       }
     }
   };
+  
 
   return (
     <div style={darkMode ? styles.darkContainer : styles.lightContainer}>
