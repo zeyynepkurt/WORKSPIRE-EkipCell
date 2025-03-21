@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # db:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: 12345
+  #     POSTGRES_DB: workspire
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - ./database_backup:/var/lib/postgresql/data"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      PORT: 5000
+      # host.docker.internal => Windows/macOS’ta Docker içinden lokal hosta
+      # eğer şifre, kullanıcı, veritabanı ismi farklıysa güncelle
+      DATABASE_URL: postgres://postgres:12345@host.docker.internal:5432/workspire
+    ports:
+      - "5000:5000"
+
+  clients:
+    build:
+      context: ./clients
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
