@@ -13,7 +13,7 @@ app.use(express.json());
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
   try {
-    const userResult = await pool.query("SELECT email, password, department FROM employees WHERE email = $1", [email]);
+    const userResult = await pool.query("SELECT employee_id, email, password, department FROM employees WHERE email = $1", [email]);
 
     if (userResult.rows.length === 0) {
       return res.status(401).json({ message: "Kullanıcı bulunamadı" });
@@ -28,11 +28,18 @@ app.post("/login", async (req, res) => {
 
     const token = jwt.sign({ email: user.email }, "mysecretkey", { expiresIn: "1h" });
 
-    res.json({ token, email: user.email, department: user.department });
+    res.json({ token, email: user.email, department: user.department, userId: user.employee_id });
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ message: "Sunucu hatası" });
   }
+});
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "API is running" });
+});
+
+app.get("/", (req, res) => {
+  res.send("API is running...");
 });
 
 
@@ -85,8 +92,89 @@ app.get("/employees/:email", async (req, res) => {
   }
 });
 
+app.get("/todos/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM todos WHERE user_id = $1 ORDER BY created_at DESC",
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("ToDo getirme hatası:", err.message);
+    res.status(500).json({ message: "Sunucu hatası" });
+  }
+});
+
 
 const PORT = process.env.PORT || 5000;
+
+// 🔹 GET: Kullanıcının görevlerini getir
+app.get("/api/todos/:userId", async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const result = await pool.query(
+      "SELECT * FROM todos WHERE user_id = $1 ORDER BY created_at DESC",
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("GET /todos error:", err.message);
+    res.status(500).json({ error: "Veriler alınamadı." });
+  }
+});
+
+// 🔹 POST: Yeni görev oluştur
+app.post("/api/todos", async (req, res) => {
+  const { user_id, title, description } = req.body;
+  try {
+    const result = await pool.query(
+      "INSERT INTO todos (user_id, title, description) VALUES ($1, $2, $3) RETURNING *",
+      [user_id, title, description]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("POST /todos error:", err.message);
+    res.status(500).json({ error: "Görev eklenemedi." });
+  }
+});
+
+// 🔹 PUT: Görev tamamlandı durumu güncelle
+app.put("/api/todos/:id", async (req, res) => {
+  const { id } = req.params;
+  const { is_completed } = req.body;
+  try {
+    const result = await pool.query(
+      "UPDATE todos SET is_completed = $1 WHERE todo_id = $2 RETURNING *",
+      [is_completed, id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("PUT /todos error:", err.message);
+    res.status(500).json({ error: "Güncelleme başarısız." });
+  }
+});
+
+// 🔹 DELETE: Görevi sil
+app.delete("/api/todos/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM todos WHERE todo_id = $1", [id]);
+    res.status(204).send();
+  } catch (err) {
+    console.error("DELETE /todos error:", err.message);
+    res.status(500).json({ error: "Silme başarısız." });
+  }
+});
+
+// Test endpoint
+app.get("/", (req, res) => {
+  res.send("Todo API çalışıyor 🚀");
+});
+
+
 app.listen(PORT, () => {
   console.log(`Sunucu ${PORT} numaralı portta çalışıyor`);
 });
+
