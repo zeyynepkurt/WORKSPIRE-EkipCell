@@ -2,13 +2,12 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 17.4
--- Dumped by pg_dump version 17.4
+-- Dumped from database version 15.12 (Debian 15.12-1.pgdg120+1)
+-- Dumped by pg_dump version 15.12 (Debian 15.12-1.pgdg120+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -53,7 +52,7 @@ CREATE SEQUENCE public.employees_employee_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.employees_employee_id_seq OWNER TO postgres;
+ALTER TABLE public.employees_employee_id_seq OWNER TO postgres;
 
 --
 -- Name: employees_employee_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -63,10 +62,55 @@ ALTER SEQUENCE public.employees_employee_id_seq OWNED BY public.employees.employ
 
 
 --
+-- Name: todos; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.todos (
+    todo_id integer NOT NULL,
+    user_id integer NOT NULL,
+    title character varying(255) NOT NULL,
+    description text,
+    is_completed boolean DEFAULT false,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.todos OWNER TO postgres;
+
+--
+-- Name: todos_todo_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.todos_todo_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.todos_todo_id_seq OWNER TO postgres;
+
+--
+-- Name: todos_todo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.todos_todo_id_seq OWNED BY public.todos.todo_id;
+
+
+--
 -- Name: employees employee_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.employees ALTER COLUMN employee_id SET DEFAULT nextval('public.employees_employee_id_seq'::regclass);
+
+
+--
+-- Name: todos todo_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.todos ALTER COLUMN todo_id SET DEFAULT nextval('public.todos_todo_id_seq'::regclass);
 
 
 --
@@ -85,10 +129,25 @@ COPY public.employees (employee_id, name, email, password, department, manager_i
 
 
 --
+-- Data for Name: todos; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.todos (todo_id, user_id, title, description, is_completed, created_at) FROM stdin;
+\.
+
+
+--
 -- Name: employees_employee_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
 SELECT pg_catalog.setval('public.employees_employee_id_seq', 3, true);
+
+
+--
+-- Name: todos_todo_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.todos_todo_id_seq', 1, false);
 
 
 --
@@ -108,11 +167,27 @@ ALTER TABLE ONLY public.employees
 
 
 --
+-- Name: todos todos_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.todos
+    ADD CONSTRAINT todos_pkey PRIMARY KEY (todo_id);
+
+
+--
 -- Name: employees employees_manager_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.employees
     ADD CONSTRAINT employees_manager_id_fkey FOREIGN KEY (manager_id) REFERENCES public.employees(employee_id);
+
+
+--
+-- Name: todos todos_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.todos
+    ADD CONSTRAINT todos_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.employees(employee_id) ON DELETE CASCADE;
 
 
 --
