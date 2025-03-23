@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaBars, FaBell, FaEnvelope, FaUserCircle, FaSearch, FaTrash, FaTimes, FaSun, FaMoon } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar"; // Sidebar bileşeni
+import TaskList from "./TaskList";
+
 
 const Dashboard = () => {
   const [personalTasks, setPersonalTasks] = useState([]);
@@ -13,19 +15,60 @@ const Dashboard = () => {
   const [language, setLanguage] = useState("tr");
   const navigate = useNavigate();
 
-  const addTask = (listSetter, newTaskSetter, newTaskValue) => {
-    if (newTaskValue.trim() !== "") {
-      listSetter(prevTasks => [...prevTasks, { id: prevTasks.length + 1, title: newTaskValue, completed: false }]);
-      newTaskSetter("");
+  
+  const userId = parseInt(localStorage.getItem("userId"));
+
+  useEffect(() => {
+    if (!userId) {
+      console.warn("userId bulunamadı, localStorage'dan alınamadı");
+      return;
     }
+
+    fetch(`http://localhost:5000/api/todos/${userId}`)
+      .then((res) => res.json())
+      .then((data) => setPersonalTasks(data))
+      .catch((err) => console.error("Görevler alınamadı:", err));
+  }, [userId]);
+
+
+  const handleAddTask = async () => {
+    if (!newPersonalTask.trim()) return;
+  
+    const newTask = {
+      user_id: userId, // 👈 Bu burada olmalı
+      title: newPersonalTask,
+      description: "",
+    };
+  
+    const res = await fetch("http://localhost:5000/api/todos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newTask),
+    });
+  
+    const added = await res.json();
+    setPersonalTasks((prev) => [added, ...prev]);
+    setNewPersonalTask("");
+  };
+  
+
+  // Görev tamamlandı/tamamlanmadı toggle
+  const toggleCompletion = async (taskId, currentStatus) => {
+    await fetch(`http://localhost:5000/api/todos/${taskId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_completed: !currentStatus })
+    });
+
+    setPersonalTasks(tasks =>
+      tasks.map(task => task.todo_id === taskId ? { ...task, is_completed: !currentStatus } : task)
+    );
   };
 
-  const toggleTaskCompletion = (listSetter, id) => {
-    listSetter(prevTasks =>
-      prevTasks.map(task =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+  // Görev sil
+  const deleteTask = async (taskId) => {
+    await fetch(`http://localhost:5000/api/todos/${taskId}`, { method: "DELETE" });
+    setPersonalTasks(tasks => tasks.filter(t => t.todo_id !== taskId));
   };
 
   const translations = {
@@ -95,28 +138,38 @@ const Dashboard = () => {
           </div>
         </nav>
 
-        {/* Task Lists */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          {[['personalTasks', personalTasks, setPersonalTasks, newPersonalTask, setNewPersonalTask], ['assignedTasks', assignedTasks, setAssignedTasks, newAssignedTask, setNewAssignedTask]].map(([key, tasks, setter, newTaskValue, newTaskSetter]) => (
-            <div key={key} className={`p-6 rounded-2xl shadow-lg ${darkMode ? "bg-gray-700 text-gray-300" : "bg-yellow-100 text-gray-900"}`}>
-              <h2 className="text-2xl font-semibold mb-4 text-center">{translations[language][key]}</h2>
-              <div className="flex gap-3 mb-4">
-                <input type="text" value={newTaskValue} onChange={(e) => newTaskSetter(e.target.value)} placeholder={translations[language].newTask} className="w-full px-4 py-2 border rounded-full focus:outline-none shadow-sm" />
-                <button onClick={() => addTask(setter, newTaskSetter, newTaskValue)} className="px-4 py-2 rounded-full bg-blue-600 text-white">➕</button>
-              </div>
-              <ul>
-                {tasks.map((task) => (
-                  <li key={task.id} className="flex justify-between items-center p-2 border-b">
-                    <input type="checkbox" checked={task.completed} onChange={() => toggleTaskCompletion(setter, task.id)} className="cursor-pointer" />
-                    <span className={task.completed ? "line-through text-gray-500" : ""}>{task.title}</span>
-                    <FaTrash onClick={() => setter(tasks.filter(t => t.id !== task.id))} className="cursor-pointer text-red-500" />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+        {/* Görev Kutusu */}
+        <div className={`p-6 mt-6 rounded-2xl shadow-lg ${darkMode ? "bg-gray-700 text-gray-300" : "bg-yellow-100 text-gray-900"}`}>
+          <h2 className="text-2xl font-semibold mb-4 text-center">{translations[language].personalTasks}</h2>
 
+          <div className="flex gap-3 mb-4">
+            <input
+              type="text"
+              value={newPersonalTask}
+              onChange={(e) => setNewPersonalTask(e.target.value)}
+              placeholder={translations[language].newTask}
+              className="w-full px-4 py-2 border rounded-full focus:outline-none shadow-sm"
+            />
+            <button onClick={handleAddTask} className="px-4 py-2 rounded-full bg-blue-600 text-white">➕</button>
+          </div>
+
+          <ul>
+            {personalTasks.map(task => (
+              <li key={task.todo_id} className="flex justify-between items-center p-2 border-b">
+                <input
+                  type="checkbox"
+                  checked={task.is_completed}
+                  onChange={() => toggleCompletion(task.todo_id, task.is_completed)}
+                  className="cursor-pointer"
+                />
+                <span className={task.is_completed ? "line-through text-gray-500" : ""}>
+                  {task.title}
+                </span>
+                <FaTrash onClick={() => deleteTask(task.todo_id)} className="cursor-pointer text-red-500" />
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

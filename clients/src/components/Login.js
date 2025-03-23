@@ -20,6 +20,10 @@ const Login = () => {
       if (res && res.data && res.data.token) {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("isAuthenticated", "true");
+        if (res.data.userId)
+          localStorage.setItem("userId", res.data.userId);
+        else
+          alert("Kullanıcı ID alınamadı.");
         
         // Kullanıcı bilgilerini kaydet
         if (res.data.email) {
