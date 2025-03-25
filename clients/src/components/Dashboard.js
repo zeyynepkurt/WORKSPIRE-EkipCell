@@ -1,102 +1,124 @@
 import { useState, useEffect } from "react";
 import { FaBars, FaBell, FaEnvelope, FaUserCircle, FaSearch, FaTrash, FaTimes, FaSun, FaMoon } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "./Sidebar"; // Sidebar bileşeni
-import TaskList from "./TaskList";
-
+import Sidebar from "./Sidebar";
+import axios from "axios";
 
 const Dashboard = () => {
   const [personalTasks, setPersonalTasks] = useState([]);
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [newPersonalTask, setNewPersonalTask] = useState("");
-  const [newAssignedTask, setNewAssignedTask] = useState("");
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [language, setLanguage] = useState("tr");
+
+  const userId = localStorage.getItem("employeeId");
   const navigate = useNavigate();
 
-  
-  const userId = parseInt(localStorage.getItem("userId"));
-
   useEffect(() => {
-    if (!userId) {
-      console.warn("userId bulunamadı, localStorage'dan alınamadı");
-      return;
+    fetchPersonalTasks();
+    fetchAssignedTasks();
+  }, []);
+
+  const fetchPersonalTasks = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/todos/${userId}`);
+      setPersonalTasks(response.data);
+    } catch (error) {
+      console.error("Kişisel görevler yüklenemedi:", error);
     }
-
-    fetch(`http://localhost:5000/api/todos/${userId}`)
-      .then((res) => res.json())
-      .then((data) => setPersonalTasks(data))
-      .catch((err) => console.error("Görevler alınamadı:", err));
-  }, [userId]);
-
-
-  const handleAddTask = async () => {
-    if (!newPersonalTask.trim()) return;
-  
-    const newTask = {
-      user_id: userId, // 👈 Bu burada olmalı
-      title: newPersonalTask,
-      description: "",
-    };
-  
-    const res = await fetch("http://localhost:5000/api/todos", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newTask),
-    });
-  
-    const added = await res.json();
-    setPersonalTasks((prev) => [added, ...prev]);
-    setNewPersonalTask("");
   };
-  
 
-  // Görev tamamlandı/tamamlanmadı toggle
+  const fetchAssignedTasks = async () => {
+    try {
+      const employeeId = localStorage.getItem("employeeId"); // ID'yi localStorage'dan çektiğinden emin ol!
+      const response = await axios.get(`http://localhost:5000/employees/assigned-tasks/${employeeId}`);
+      setAssignedTasks(response.data);
+    } catch (error) {
+      console.error("Atanan görevler yüklenemedi:", error);
+    }
+  };
+
+  const handleAddPersonalTask = async () => {
+    if (!newPersonalTask.trim()) return;
+
+    try {
+      const response = await axios.post("http://localhost:5000/api/todos", {
+        user_id: userId,
+        title: newPersonalTask,
+      });
+
+      if (response.data) {
+        setPersonalTasks((prev) => [response.data, ...prev]);
+        setNewPersonalTask("");
+      }
+    } catch (error) {
+      console.error("Görev eklenemedi:", error);
+    }
+  };
+
   const toggleCompletion = async (taskId, currentStatus) => {
-    await fetch(`http://localhost:5000/api/todos/${taskId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_completed: !currentStatus })
-    });
+    await axios.put(`http://localhost:5000/api/todos/${taskId}`, { is_completed: !currentStatus });
 
-    setPersonalTasks(tasks =>
-      tasks.map(task => task.todo_id === taskId ? { ...task, is_completed: !currentStatus } : task)
+    setPersonalTasks((tasks) =>
+      tasks.map((task) =>
+        task.todo_id === taskId ? { ...task, is_completed: !currentStatus } : task
+      )
     );
   };
 
-  // Görev sil
+  const toggleCompletionAssigned = async (taskId, currentStatus) => {
+    try {
+      await axios.put(`http://localhost:5000/employees/assigned-tasks/${taskId}`, { 
+        is_completed: !currentStatus 
+      });
+  
+      setAssignedTasks((tasks) =>
+        tasks.map((task) =>
+          task.task_id === taskId ? { ...task, is_completed: !currentStatus } : task
+        )
+      );
+    } catch (error) {
+      console.error("Toggle hatası:", error);
+    }
+  };
+  
+
+  
+
   const deleteTask = async (taskId) => {
-    await fetch(`http://localhost:5000/api/todos/${taskId}`, { method: "DELETE" });
-    setPersonalTasks(tasks => tasks.filter(t => t.todo_id !== taskId));
+    await axios.delete(`http://localhost:5000/api/todos/${taskId}`);
+    setPersonalTasks((tasks) => tasks.filter((t) => t.todo_id !== taskId));
   };
 
   const translations = {
     tr: {
-      home: "Anasayfa - ToDo",
-      calendar: "Genel Görevli Takvim",
-      pomodoro: "Pomodoro - Çalışma Saati Sıralama",
-      scoreboard: "Puanlama Tablosu",
-      game: "Mini Oyun",
-      team: "Takım Arkadaşlarım",
       search: "Ara...",
-      newTask: "Yeni görev ekle...",
       personalTasks: "Kişisel Görevler",
-      assignedTasks: "Atanan Görevler"
+      assignedTasks: "Atanan Görevler",
+      newTask: "Yeni görev ekle...",
+      completed: "✓",
+      taskName: "Görev Adı",
+      description: "Açıklama",
+      score: "Puan",
+      deadline: "Son Tarih",
+      noTask: "Henüz atanmış görev yok."
     },
     en: {
-      home: "Home - ToDo",
-      calendar: "General Task Calendar",
-      pomodoro: "Pomodoro - Work Session Ranking",
-      scoreboard: "Scoreboard",
-      game: "Mini Game",
-      team: "Team Members",
       search: "Search...",
-      newTask: "Add new task...",
       personalTasks: "Personal Tasks",
-      assignedTasks: "Assigned Tasks"
-    }
+      assignedTasks: "Assigned Tasks",
+      newTask: "Add new task...",
+      completed: "✓",
+      taskName: "Task Name",
+      description: "Description",
+      score: "Score",
+      deadline: "Deadline",
+      noTask: "No assigned tasks yet."
+    },
   };
+  
+
 
   return (
     <div className={`${darkMode ? "bg-gray-800 text-gray-200" : "bg-gray-100 text-gray-900"} h-screen p-6 relative flex`}>
@@ -112,15 +134,9 @@ const Dashboard = () => {
         {/* Navbar */}
         <nav className={`flex justify-between items-center p-4 ${darkMode ? "bg-blue-800" : "bg-blue-900"} text-white shadow-md rounded-xl relative z-40`}>
           <div className="flex items-center gap-4">
-            <button onClick={() => setMenuOpen(true)} className="text-2xl">
-              <FaBars />
-            </button>
+            <button onClick={() => setMenuOpen(true)} className="text-2xl"><FaBars /></button>
             <div className="relative w-full max-w-md">
-              <input
-                type="text"
-                placeholder={translations[language].search}
-                className="w-full px-4 py-2 rounded-full text-black focus:outline-none shadow-md"
-              />
+              <input type="text" placeholder={translations[language].search} className="w-full px-4 py-2 rounded-full text-black focus:outline-none shadow-md" />
               <FaSearch className="absolute right-3 top-3 text-gray-600" />
             </div>
           </div>
@@ -138,37 +154,87 @@ const Dashboard = () => {
           </div>
         </nav>
 
-        {/* Görev Kutusu */}
-        <div className={`p-6 mt-6 rounded-2xl shadow-lg ${darkMode ? "bg-gray-700 text-gray-300" : "bg-yellow-100 text-gray-900"}`}>
-          <h2 className="text-2xl font-semibold mb-4 text-center">{translations[language].personalTasks}</h2>
+        {/* Görevler Alanı */}
+        <div className="grid grid-cols-2 gap-6 mt-6">
+          {/* Kişisel Görevler */}
+          <div className={`p-6 rounded-2xl shadow-lg ${darkMode ? "bg-gray-700 text-gray-300" : "bg-yellow-100 text-gray-900"}`}>
+            <h2 className="text-2xl font-semibold mb-4 text-center">{translations[language].personalTasks}</h2>
 
-          <div className="flex gap-3 mb-4">
-            <input
-              type="text"
-              value={newPersonalTask}
-              onChange={(e) => setNewPersonalTask(e.target.value)}
-              placeholder={translations[language].newTask}
-              className="w-full px-4 py-2 border rounded-full focus:outline-none shadow-sm"
-            />
-            <button onClick={handleAddTask} className="px-4 py-2 rounded-full bg-blue-600 text-white">➕</button>
+            <div className="flex gap-3 mb-4">
+              <input
+                type="text"
+                value={newPersonalTask}
+                onChange={(e) => setNewPersonalTask(e.target.value)}
+                placeholder={translations[language].newTask}
+                className="w-full px-4 py-2 border rounded-full focus:outline-none shadow-sm"
+              />
+              <button onClick={handleAddPersonalTask} className="px-4 py-2 rounded-full bg-blue-600 text-white">➕</button>
+            </div>
+
+            <ul>
+              {personalTasks.map(task => (
+                <li key={task.todo_id} className="flex justify-between items-center p-2 border-b">
+                  <input
+                    type="checkbox"
+                    checked={task.is_completed}
+                    onChange={() => toggleCompletion(task.todo_id, task.is_completed)}
+                    className="cursor-pointer"
+                  />
+                  <span className={task.is_completed ? "line-through text-gray-500" : ""}>
+                    {task.title}
+                  </span>
+                  <FaTrash onClick={() => deleteTask(task.todo_id)} className="cursor-pointer text-red-500" />
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <ul>
-            {personalTasks.map(task => (
-              <li key={task.todo_id} className="flex justify-between items-center p-2 border-b">
+        {/* Atanan Görevler */}
+        <div className={`p-6 rounded-2xl shadow-lg ${darkMode ? "bg-gray-700 text-gray-300" : "bg-yellow-100 text-gray-900"}`}>
+          <h2 className="text-2xl font-semibold mb-4 text-center">
+            {translations[language].assignedTasks}
+          </h2>
+
+          <div className="grid grid-cols-12 font-bold border-b pb-2 mb-2">
+            <span className="col-span-1 text-center">{translations[language].completed}</span>
+            <span className="col-span-4">{translations[language].taskName}</span>
+            <span className="col-span-3">{translations[language].description}</span>
+            <span className="col-span-2 text-center">{translations[language].score}</span>
+            <span className="col-span-2 text-center">{translations[language].deadline}</span>
+          </div>
+
+
+          {assignedTasks.length > 0 ? (
+            assignedTasks.map((task) => (
+              <div key={task.task_id} className="grid grid-cols-12 items-center py-2 border-b">
                 <input
                   type="checkbox"
                   checked={task.is_completed}
-                  onChange={() => toggleCompletion(task.todo_id, task.is_completed)}
-                  className="cursor-pointer"
+                  onChange={() => toggleCompletionAssigned(task.task_id, task.is_completed)}
+                  className="cursor-pointer col-span-1 justify-self-center"
                 />
-                <span className={task.is_completed ? "line-through text-gray-500" : ""}>
-                  {task.title}
+                <span className={`col-span-4 ${task.is_completed ? "line-through text-gray-500" : ""}`}>
+                  {task.task_name}
                 </span>
-                <FaTrash onClick={() => deleteTask(task.todo_id)} className="cursor-pointer text-red-500" />
-              </li>
-            ))}
-          </ul>
+                <span className={`col-span-3 ${task.is_completed ? "line-through text-gray-500" : ""}`}>
+                  {task.task_description}
+                </span>
+                <span className={`col-span-2 text-center ${task.is_completed ? "line-through text-gray-500" : ""}`}>
+                  {task.score}
+                </span>
+                <span className={`col-span-2 text-center ${task.is_completed ? "line-through text-gray-500" : ""}`}>
+                  {new Date(task.deadline).toLocaleDateString('tr-TR')}
+                </span>
+              </div>
+
+            ))
+          ) : (
+            <p className="text-center py-2">{translations[language].noTask}</p>
+          )}
+
+        </div>
+
+
         </div>
       </div>
     </div>
