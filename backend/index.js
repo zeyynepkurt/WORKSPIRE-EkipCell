@@ -3,37 +3,51 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-
+const employeeRoutes = require('./routes/employees');
 const pool = require('./db/db');
-
 const app = express();
 app.use(cors());
 app.use(express.json());
-
+app.use('/employees', employeeRoutes);
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
   try {
-    const userResult = await pool.query("SELECT employee_id, email, password, department FROM employees WHERE email = $1", [email]);
+    const userResult = await pool.query(
+      "SELECT employee_id, email, password, department, manager_id FROM employees WHERE email = $1",
+      [email]
+    );
 
     if (userResult.rows.length === 0) {
-      return res.status(401).json({ message: "Kullanıcı bulunamadı" });
+      return res.status(400).json({ message: "Kullanıcı bulunamadı." });
     }
 
     const user = userResult.rows[0];
 
     const validPassword = await bcrypt.compare(password, user.password);
+
     if (!validPassword) {
-      return res.status(401).json({ message: "Geçersiz şifre" });
+      return res.status(400).json({ message: "Şifre yanlış." });
     }
 
-    const token = jwt.sign({ email: user.email }, "mysecretkey", { expiresIn: "1h" });
+    const token = jwt.sign(
+      { employee_id: user.employee_id, manager_id: user.manager_id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
-    res.json({ token, email: user.email, department: user.department, userId: user.employee_id });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ message: "Sunucu hatası" });
+    res.json({
+      token,
+      email: user.email,
+      department: user.department,
+      employee_id: user.employee_id,
+      manager_id: user.manager_id  // Manager ID döndürüldüğünden emin ol
+    });
+  } catch (error) {
+    console.error("Hata:", error);
+    res.status(500).json({ message: "Sunucu hatası." });
   }
 });
+
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "API is running" });
 });
@@ -176,5 +190,25 @@ app.get("/", (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Sunucu ${PORT} numaralı portta çalışıyor`);
+});
+
+// Atanan Görevleri Getirme API'si
+app.get("/assigned-tasks/:employeeId", async (req, res) => {
+  const { employeeId } = req.params;
+  try {
+      const result = await pool.query(
+          "SELECT * FROM assigned_tasks WHERE employee_id = $1",
+          [employeeId]
+      );
+
+      if (result.rows.length === 0) {
+          return res.status(404).json({ message: "Bu çalışana atanmış görev bulunamadı." });
+      }
+
+      res.json(result.rows);
+  } catch (error) {
+      console.error("Atanan görevler getirilemedi:", error);
+      res.status(500).json({ message: "Sunucu hatası." });
+  }
 });
 
