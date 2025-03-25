@@ -23,6 +23,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
+  
+
+
   "eslintConfig": {
     "extends": [
       "react-app",
@@ -40,5 +43,7 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+   "proxy": "http://workspire-main-backend:5000"
+
 }
