@@ -1,41 +1,47 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./components/Login";
-import Dashboard from "./components/Dashboard"; // Yeni eklenen sayfa
-import TaskCalendar from "./components/Calendar"; // Takvim sayfasını ekledik
+import Dashboard from "./components/Dashboard";
+import TaskCalendar from "./components/Calendar";
 import TeamMembers from "./components/TeamMembers";
 import TeamMemberDetail from "./components/TeamMemberDetails";
 import PomodoroTimer from "./components/Pomodoro";
-import ManagerHome from './components/ManagerHome';
-
+import ManagerHome from "./components/ManagerHome";
+import ChatPage from "./components/ChatPage";
+import Layout from "./components/Layout";
 
 function App() {
-  // Kullanıcı giriş yapmış mı kontrol et
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
-  const employeeId = localStorage.getItem("employeeId"); // Kullanıcının ID'si
-  const managerId = localStorage.getItem("managerId");   // Kullanıcının Manager ID'si
+  const employeeId = localStorage.getItem("employeeId");
+  const managerId = localStorage.getItem("managerId");
 
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
-        
-        {/* Kullanıcı giriş yapmışsa kendi Dashboard'una yönlendir */}
-        <Route path="/home" element={isAuthenticated ? <Dashboard employeeId={employeeId} /> : <Navigate to="/" />} />
 
-        {/* Yönetici (managerId = 1) ekranı */}
-        <Route path="/manager" element={isAuthenticated && managerId === "1" ? <ManagerHome /> : <Navigate to="/" />} />
-        
-        {/* Diğer sayfalar */}
-        <Route path="/calendar" element={isAuthenticated ? <TaskCalendar /> : <Navigate to="/" />} />  
-        <Route path="/team-members" element={isAuthenticated ? <TeamMembers /> : <Navigate to="/" />} />
-        <Route path="/team-members/:id" element={isAuthenticated ? <TeamMemberDetail /> : <Navigate to="/" />} />
-        <Route path="/pomodoro" element={isAuthenticated ? <PomodoroTimer /> : <Navigate to="/" />} />
+        {/** Giriş yapılmış kullanıcılar için Layout içeren sayfalar */}
+        {isAuthenticated && (
+          <Route element={<Layout />}>
+            <Route path="/home" element={<Dashboard employeeId={employeeId} />} />
+            <Route path="/calendar" element={<TaskCalendar />} />
+            <Route path="/team-members" element={<TeamMembers />} />
+            <Route path="/team-members/:id" element={<TeamMemberDetail />} />
+            <Route path="/pomodoro" element={<PomodoroTimer />} />
+            <Route path="/messages" element={<ChatPage />} />
+          </Route>
+        )}
 
-        {/* Geçersiz bir sayfa girildiğinde login'e yönlendirme */}
-        <Route path="*" element={<Navigate to="/" />} /> 
+        {/** Yönetici sayfası ayrı kontrol edilir */}
+        <Route
+          path="/manager"
+          element={isAuthenticated && managerId === "1" ? <ManagerHome /> : <Navigate to="/" />}
+        />
+
+        {/** Hatalı rota */}
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
   );
 }
 
-export default App;
+export default App; 
