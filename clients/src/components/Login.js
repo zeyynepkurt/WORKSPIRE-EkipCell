@@ -12,43 +12,39 @@ const Login = () => {
     e.preventDefault();
 
     try {
-        const res = await axios.post("http://localhost:5000/login", { email, password });
+      const res = await axios.post("http://localhost:5000/login", { email, password });
+      console.log("API Yanıtı:", res.data);  // Gelen yanıtı konsola yazdır
 
-        console.log("API Yanıtı:", res.data);  // Gelen yanıtı konsola yazdır
-
-        if (res && res.data && res.data.token) {
-            localStorage.setItem("token", res.data.token);
-            localStorage.setItem("isAuthenticated", "true");
-
-            // Kullanıcı bilgilerini kaydet
-            localStorage.setItem("userEmail", res.data.email);
-            localStorage.setItem("userDepartment", res.data.department);
-            localStorage.setItem("employeeId", res.data.employee_id);
-            localStorage.setItem("managerId", res.data.manager_id);
-            
-            console.log("employeeId kontrol:", res.data.employee_id);
-            // Yönetici mi yoksa normal kullanıcı mı kontrol et
-            if (parseInt(res.data.manager_id) === 1) {  // Sayıya çevrildiğinden emin ol
-                navigate("/manager");
-            } else {
-                navigate("/home");
-            }
+      if (res && res.data && res.data.token) {
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("isAuthenticated", "true");
+        localStorage.setItem("employeeId", res.data.employee_id);
+        localStorage.setItem("userEmail", res.data.email);
+        localStorage.setItem("userDepartment", res.data.department);
+        localStorage.setItem("managerId", res.data.manager_id);
+        console.log("employeeId kontrol:", res.data.employee_id);
+        
+        if (parseInt(res.data.manager_id) === 1) {
+          navigate("/manager");
         } else {
-            alert("Giriş yapılamadı, beklenmeyen hata.");
+          navigate("/home");
         }
+      } else {
+        alert("Giriş yapılamadı. Kullanıcı bilgileri eksik.");
+      }
 
     } catch (error) {
         if (error.response) {
-            console.error("Hata:", error.response.data);
-            alert(error.response.data.message);
-        } else {
-            console.error("Sunucu Hatası:", error.message);
-            alert("Sunucuya bağlanılamıyor.");
-        }
+          console.error("Hata:", error.response.data);
+          alert(error.response.data.message);
+      } else {
+          console.error("Sunucu Hatası:", error.message);
+          alert("Sunucuya bağlanılamıyor.");
+      }
     }
-};
+  };
 
-  
+    
 
   return (
     <div style={darkMode ? styles.darkContainer : styles.lightContainer}>

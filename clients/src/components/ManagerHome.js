@@ -61,10 +61,6 @@ const handleInputChange = (e) => {
 }
 
 
-
-
-
-
   // To-Do List (sol kısım) fonksiyonları
   const addPersonalTask = () => {
     if (newPersonalTask.trim() !== "") {
@@ -95,7 +91,7 @@ const handleInputChange = (e) => {
         task_name: newTask.task_name,
         task_description: newTask.task_description,
         deadline: newTask.deadline,
-        score: newTask.score
+        score: newTask.score || 0, 
       });
 
       if (response.data.message) {

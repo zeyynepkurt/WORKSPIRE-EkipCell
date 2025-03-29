@@ -1,19 +1,14 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import Sidebar from "./Sidebar";
-import Navbar from "./Navbar";
+import { useOutletContext } from "react-router-dom";
 import { FaPlay, FaPause, FaRedo } from "react-icons/fa";
-import { FaBars, FaBell, FaEnvelope, FaUserCircle, FaSearch, FaSun, FaMoon } from "react-icons/fa";
 
 const Pomodoro = () => {
   const [time, setTime] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [language, setLanguage] = useState("tr");
   const [sessions, setSessions] = useState([]);
   const [customTime, setCustomTime] = useState(25);
-  const navigate = useNavigate();
+
+  const { darkMode, language } = useOutletContext();
 
   useEffect(() => {
     let timer;
@@ -33,53 +28,44 @@ const Pomodoro = () => {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  return (
-    <div className={`${darkMode ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-900"} h-screen p-6 relative flex`}>      
-      <Sidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} darkMode={darkMode} language={language} />
-      <div className="flex-1 flex flex-col">
-        <nav className={`flex justify-between items-center p-4 ${darkMode ? "bg-blue-800" : "bg-blue-900"} text-white shadow-md rounded-xl relative z-40`}>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setMenuOpen(true)} className="text-2xl">
-              <FaBars />
-            </button>
-            <div className="relative w-full max-w-md">
-              <input type="text" placeholder={language === "tr" ? "Ara..." : "Search..."} className="w-full px-4 py-2 rounded-full text-black focus:outline-none shadow-md" />
-              <FaSearch className="absolute right-3 top-3 text-gray-600" />
-            </div>
-          </div>
-          <div className="flex items-center gap-6">
-            <FaEnvelope className="text-2xl cursor-pointer" />
-            <FaBell className="text-2xl cursor-pointer" />
-            <FaUserCircle className="text-3xl cursor-pointer" />
-            <button onClick={() => setDarkMode(!darkMode)} className="text-xl">
-              {darkMode ? <FaSun className="text-yellow-400" /> : <FaMoon className="text-yellow-500" />}
-            </button>
-            <div className="flex gap-2">
-              <button className={`px-3 py-1 rounded-lg text-sm ${language === "tr" ? "bg-yellow-500" : "bg-gray-500"}`} onClick={() => setLanguage("tr")}>TR</button>
-              <button className={`px-3 py-1 rounded-lg text-sm ${language === "en" ? "bg-yellow-500" : "bg-gray-500"}`} onClick={() => setLanguage("en")}>EN</button>
-            </div>
-          </div>
-        </nav>
+  const translations = {
+    tr: {
+      title: "Pomodoro Zamanlayıcı",
+      setTime: "Süreyi Ayarla",
+      workLog: "Haftalık Çalışma Süresi",
+      duration: "Süre"
+    },
+    en: {
+      title: "Pomodoro Timer",
+      setTime: "Set Time",
+      workLog: "Weekly Work Sessions",
+      duration: "Duration"
+    }
+  };
 
-        <div className="flex justify-between p-10">
-          {/* Sol tarafta sayaç */}
-          <div className={`flex flex-col items-center p-10 ${darkMode ? "bg-gray-700 text-gray-400" : "bg-yellow-100 text-gray-900"} shadow-lg rounded-lg w-1/2`}>
-          <img src="/assets/pomodoro.gif" alt="Pomodoro Timer Animation" className="w-32 h-32 mb-4" />
-            <h1 className="text-3xl font-bold mb-4">{language === "tr" ? "Pomodoro Zamanlayıcı" : "Pomodoro Timer"}</h1>
+  return (
+    <div className={`w-full pt-16 px-4 md:px-8 lg:px-16 ${darkMode ? "bg-[#0f172a] text-white" : "bg-white text-gray-900"}`}>
+      <div className="flex flex-col lg:flex-row justify-center gap-6">
+        
+        {/* Sol: Sayaç */}
+        <div className={`flex-1 p-8 rounded-2xl shadow-lg ${darkMode ? "bg-blue-900 text-white" : "bg-yellow-100 text-gray-900"}`}>
+          <div className="flex flex-col items-center">
+            <img src="/assets/pomodoro.gif" alt="Pomodoro Timer" className="w-32 h-32 mb-4" />
+            <h1 className="text-3xl font-bold mb-4">{translations[language].title}</h1>
             <input 
               type="number" 
               value={customTime} 
               onChange={(e) => setCustomTime(e.target.value)}
-              className="border p-2 rounded mb-4 w-24 text-center"
+              className="border p-2 rounded mb-4 w-24 text-center text-black"
             />
             <button 
               className="bg-blue-600 text-white px-4 py-2 rounded mb-4" 
               onClick={() => setTime(customTime * 60)}
             >
-              {language === "tr" ? "Süreyi Ayarla" : "Set Time"}
+              {translations[language].setTime}
             </button>
-            <h2 className="text-6xl font-bold">{formatTime(time)}</h2>
-            <div className="flex justify-center gap-6 mt-6">
+            <h2 className="text-6xl font-bold mb-6">{formatTime(time)}</h2>
+            <div className="flex justify-center gap-6">
               <button 
                 className={`px-6 py-3 ${isRunning ? "bg-red-500" : "bg-green-500"} text-white rounded-full text-xl`} 
                 onClick={() => setIsRunning(!isRunning)}
@@ -94,32 +80,32 @@ const Pomodoro = () => {
               </button>
             </div>
           </div>
-
-          {/* Sağ tarafta çalışma süreleri */}
-          <div className={`w-1/3 ${darkMode ? "bg-gray-700 text-gray-400" : "bg-yellow-100 text-gray-900"} shadow-lg rounded-lg p-6`}>
-            <h2 className="text-2xl font-bold mb-4">{language === "tr" ? "Haftalık Çalışma Süresi" : "Weekly Work Sessions"}</h2>
-            <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-200">
-                  <th className="border border-gray-300 px-4 py-2">{language === "tr" ? "#" : "#"}</th>
-                  <th className="border border-gray-300 px-4 py-2">{language === "tr" ? "Süre" : "Duration"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.map((session) => (
-                  <tr key={session.id} className="text-center">
-                    <td className="border border-gray-300 px-4 py-2">{session.id}</td>
-                    <td className="border border-gray-300 px-4 py-2">{session.duration}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
+
+        {/* Sağ: Oturum Listesi */}
+        <div className={`w-full lg:w-1/3 p-8 rounded-2xl shadow-lg ${darkMode ? "bg-blue-900 text-white" : "bg-yellow-100 text-gray-900"}`}>
+          <h2 className="text-2xl font-bold mb-4">{translations[language].workLog}</h2>
+          <table className="w-full border-collapse border border-gray-300 text-sm">
+            <thead>
+              <tr className="bg-gray-200 text-black">
+                <th className="border border-gray-300 px-4 py-2">#</th>
+                <th className="border border-gray-300 px-4 py-2">{translations[language].duration}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sessions.map((session) => (
+                <tr key={session.id} className="text-center">
+                  <td className="border border-gray-300 px-4 py-2">{session.id}</td>
+                  <td className="border border-gray-300 px-4 py-2">{session.duration}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
       </div>
     </div>
   );
 };
-
 
 export default Pomodoro;

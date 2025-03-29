@@ -24,7 +24,8 @@ const Sidebar = ({ menuOpen, setMenuOpen, darkMode, language }) => {
   };
 
   return (
-    <div className={`fixed top-0 left-0 h-full w-64 ${darkMode ? "bg-gray-900 text-white" : "bg-blue-900 text-white"} transform ${menuOpen ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 shadow-lg z-50`}>
+    <div className={`${darkMode ? "bg-gray-800 text-white" : "bg-blue-900 text-white"}`}>
+
       {/* Kapat Butonu */}
       <button className="absolute top-4 right-4 text-white text-2xl" onClick={() => setMenuOpen(false)}>
         <FaTimes />
