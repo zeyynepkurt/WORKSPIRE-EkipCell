@@ -226,6 +226,47 @@ app.delete("/api/todos/:id", async (req, res) => {
     res.status(500).json({ error: "Silme başarısız." });
   }
 });
+// -------------------- POMODORO: Çalışma Süresi Ekleme ------------------------
+app.post("/api/pomodoro/complete", async (req, res) => {
+  const { employee_id, minutes } = req.body;
+
+  try {
+    const result = await pool.query(`
+      INSERT INTO work_sessions (employee_id, minutes)
+      VALUES ($1, $2)
+      ON CONFLICT (employee_id)
+      DO UPDATE SET minutes = work_sessions.minutes + EXCLUDED.minutes
+      RETURNING *
+    `, [employee_id, minutes]);
+
+    console.log("Database güncellemesi başarılı:", result.rows[0]);
+    res.json({ success: true, message: "Pomodoro kaydedildi.", data: result.rows[0] });
+  } catch (error) {
+    console.error("Pomodoro kaydetme hatası:", error.message);
+    res.status(500).json({ success: false, message: "Sunucu hatası." });
+  }
+});
+
+// -------------------- POMODORO: Departman Skoru Çekme ------------------------
+app.get("/api/pomodoro/scoreboard/:department", async (req, res) => {
+  const { department } = req.params;
+
+  try {
+    const result = await pool.query(`
+      SELECT e.employee_id, e.name, e.department, COALESCE(w.minutes, 0) AS minutes
+      FROM employees e
+      LEFT JOIN work_sessions w ON e.employee_id = w.employee_id
+      WHERE e.department = $1
+      ORDER BY minutes DESC;
+    `, [department]);
+
+    console.log("Departman Skoru Başarıyla Çekildi.");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Scoreboard hatası:", err.message);
+    res.status(500).json({ message: "Sunucu hatası" });
+  }
+});
 
 // ======================= SUNUCUYU BAŞLAT ============================
 const PORT = process.env.PORT || 5000;
