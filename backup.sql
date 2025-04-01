@@ -1,13 +1,14 @@
-﻿--
+--
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.12 (Debian 15.12-1.pgdg120+1)
--- Dumped by pg_dump version 15.12 (Debian 15.12-1.pgdg120+1)
+-- Dumped from database version 17.4
+-- Dumped by pg_dump version 17.4
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -52,7 +53,7 @@ CREATE SEQUENCE public.assigned_tasks_task_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.assigned_tasks_task_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.assigned_tasks_task_id_seq OWNER TO postgres;
 
 --
 -- Name: assigned_tasks_task_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -93,13 +94,49 @@ CREATE SEQUENCE public.employees_employee_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.employees_employee_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.employees_employee_id_seq OWNER TO postgres;
 
 --
 -- Name: employees_employee_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.employees_employee_id_seq OWNED BY public.employees.employee_id;
+
+
+--
+-- Name: messages; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.messages (
+    id integer NOT NULL,
+    username character varying(100),
+    content text NOT NULL,
+    "timestamp" timestamp with time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.messages OWNER TO postgres;
+
+--
+-- Name: messages_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.messages_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.messages_id_seq OWNER TO postgres;
+
+--
+-- Name: messages_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.messages_id_seq OWNED BY public.messages.id;
 
 
 --
@@ -131,13 +168,49 @@ CREATE SEQUENCE public.todos_todo_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.todos_todo_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.todos_todo_id_seq OWNER TO postgres;
 
 --
 -- Name: todos_todo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
 ALTER SEQUENCE public.todos_todo_id_seq OWNED BY public.todos.todo_id;
+
+
+--
+-- Name: work_sessions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.work_sessions (
+    session_id integer NOT NULL,
+    employee_id integer NOT NULL,
+    minutes integer DEFAULT 0 NOT NULL,
+    created_at timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.work_sessions OWNER TO postgres;
+
+--
+-- Name: work_sessions_session_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.work_sessions_session_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.work_sessions_session_id_seq OWNER TO postgres;
+
+--
+-- Name: work_sessions_session_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.work_sessions_session_id_seq OWNED BY public.work_sessions.session_id;
 
 
 --
@@ -155,10 +228,24 @@ ALTER TABLE ONLY public.employees ALTER COLUMN employee_id SET DEFAULT nextval('
 
 
 --
+-- Name: messages id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.messages ALTER COLUMN id SET DEFAULT nextval('public.messages_id_seq'::regclass);
+
+
+--
 -- Name: todos todo_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.todos ALTER COLUMN todo_id SET DEFAULT nextval('public.todos_todo_id_seq'::regclass);
+
+
+--
+-- Name: work_sessions session_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.work_sessions ALTER COLUMN session_id SET DEFAULT nextval('public.work_sessions_session_id_seq'::regclass);
 
 
 --
@@ -187,6 +274,14 @@ COPY public.employees (employee_id, name, email, password, department, manager_i
 
 
 --
+-- Data for Name: messages; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.messages (id, username, content, "timestamp") FROM stdin;
+\.
+
+
+--
 -- Data for Name: todos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -194,6 +289,24 @@ COPY public.todos (todo_id, user_id, title, description, is_completed, created_a
 11	5	wawaraw	\N	f	2025-03-25 02:10:05.554615
 12	5	rghfgfd	\N	f	2025-03-25 02:10:12.117838
 13	5	yuguyhgbhj	\N	f	2025-03-25 02:15:23.316236
+14	2	fhgh	\N	f	2025-04-01 11:28:20.40645
+15	2	dhj	\N	f	2025-04-01 11:28:22.659855
+16	2	dfg	\N	f	2025-04-01 11:28:33.87021
+\.
+
+
+--
+-- Data for Name: work_sessions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.work_sessions (session_id, employee_id, minutes, created_at) FROM stdin;
+1	3	0	2025-04-01 10:24:54.016352
+2	5	0	2025-04-01 10:24:54.016352
+3	6	0	2025-04-01 10:24:54.016352
+4	4	0	2025-04-01 10:24:54.016352
+6	7	0	2025-04-01 10:24:54.016352
+7	1	0	2025-04-01 10:24:54.016352
+5	2	3	2025-04-01 10:24:54.016352
 \.
 
 
@@ -212,10 +325,24 @@ SELECT pg_catalog.setval('public.employees_employee_id_seq', 3, true);
 
 
 --
+-- Name: messages_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.messages_id_seq', 1, false);
+
+
+--
 -- Name: todos_todo_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.todos_todo_id_seq', 13, true);
+SELECT pg_catalog.setval('public.todos_todo_id_seq', 16, true);
+
+
+--
+-- Name: work_sessions_session_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.work_sessions_session_id_seq', 9, true);
 
 
 --
@@ -243,11 +370,35 @@ ALTER TABLE ONLY public.employees
 
 
 --
+-- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: todos todos_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.todos
     ADD CONSTRAINT todos_pkey PRIMARY KEY (todo_id);
+
+
+--
+-- Name: work_sessions work_sessions_employee_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.work_sessions
+    ADD CONSTRAINT work_sessions_employee_id_key UNIQUE (employee_id);
+
+
+--
+-- Name: work_sessions work_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.work_sessions
+    ADD CONSTRAINT work_sessions_pkey PRIMARY KEY (session_id);
 
 
 --
@@ -278,27 +429,3 @@ ALTER TABLE ONLY public.todos
 -- PostgreSQL database dump complete
 --
 
--- Chat mesajları için tablo
-CREATE TABLE IF NOT EXISTS public.messages (
-  id SERIAL PRIMARY KEY,
-  username VARCHAR(100),
-  content TEXT NOT NULL,
-  timestamp TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE messages
-    ADD COLUMN IF NOT EXISTS department VARCHAR(100),
-    ADD COLUMN IF NOT EXISTS recipient_email VARCHAR(100),
-    ADD COLUMN IF NOT EXISTS is_private BOOLEAN DEFAULT false;
-
-CREATE TABLE assigned_tasks (
-  task_id SERIAL PRIMARY KEY,
-  employee_id INTEGER REFERENCES employees(employee_id),
-  manager_id INTEGER REFERENCES employees(employee_id),
-  task_name TEXT NOT NULL,
-  task_description TEXT,
-  deadline DATE NOT NULL,
-  score INTEGER NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  is_completed BOOLEAN DEFAULT FALSE
-);
