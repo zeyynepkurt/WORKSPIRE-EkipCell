@@ -8,6 +8,7 @@ import PomodoroTimer from "./components/Pomodoro";
 import ManagerHome from "./components/ManagerHome";
 import ChatPage from "./components/ChatPage";
 import Layout from "./components/Layout";
+import MemoryGame from "./components/MemoryGame";
 
 function App() {
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
@@ -28,6 +29,7 @@ function App() {
             <Route path="/team-members/:id" element={<TeamMemberDetail />} />
             <Route path="/pomodoro" element={<PomodoroTimer />} />
             <Route path="/messages" element={<ChatPage />} />
+            <Route path="/game" element={<MemoryGame />} />
           </Route>
         )}
 
