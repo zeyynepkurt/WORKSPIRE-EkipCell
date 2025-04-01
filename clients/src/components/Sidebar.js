@@ -24,8 +24,8 @@ const Sidebar = ({ menuOpen, setMenuOpen, darkMode, language }) => {
   };
 
   return (
-    <div className={`${darkMode ? "bg-gray-800 text-white" : "bg-blue-900 text-white"}`}>
-
+    <div className={`${darkMode ? "bg-gray-800 text-white" : "bg-blue-900 text-white"} h-full w-64 fixed top-0 left-0 z-50`}>
+      
       {/* Kapat Butonu */}
       <button className="absolute top-4 right-4 text-white text-2xl" onClick={() => setMenuOpen(false)}>
         <FaTimes />
@@ -39,18 +39,24 @@ const Sidebar = ({ menuOpen, setMenuOpen, darkMode, language }) => {
         <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" onClick={() => { navigate("/home"); setMenuOpen(false); }}>
           {translations[language].home}
         </button>
+        
         <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" onClick={() => { navigate("/calendar"); setMenuOpen(false); }}>
           {translations[language].calendar}
         </button>
+        
         <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" onClick={() => { navigate("/pomodoro"); setMenuOpen(false); }}>
           {translations[language].pomodoro}
         </button>
-        <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" disabled>
+        
+        {/* Puanlama Tablosu Linki (DÜZELTİLDİ - Artık çalışacak) */}
+        <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" onClick={() => { navigate("/scoreboard"); setMenuOpen(false); }}>
           {translations[language].scoreboard}
         </button>
+        
         <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" onClick={() => { navigate("/game"); setMenuOpen(false); }}>
           {translations[language].game}
         </button>
+        
         <button 
           className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" 
           onClick={() => { navigate("/team-members"); setMenuOpen(false); }}>

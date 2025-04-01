@@ -67,18 +67,27 @@ const Dashboard = () => {
 
   const toggleCompletionAssigned = async (taskId, currentStatus) => {
     try {
-      await axios.put(`http://localhost:5000/employees/assigned-tasks/${taskId}`, {
-        is_completed: !currentStatus,
-      });
-      setAssignedTasks((tasks) =>
-        tasks.map((task) =>
-          task.task_id === taskId ? { ...task, is_completed: !currentStatus } : task
-        )
-      );
+      console.log(`Görev ID: ${taskId} - Şu Anki Durum: ${currentStatus}`);  // Hangi görevin işaretlendiğini görmek için
+
+      const response = await axios.put(`http://localhost:5000/complete-task/${taskId}`);
+
+      if (response.data.message === "Görev başarıyla tamamlandı.") {
+          console.log("Görev başarıyla tamamlandı!");  // Başarılı yanıtı console'da gör
+
+          setAssignedTasks((tasks) =>
+              tasks.map((task) =>
+                  task.task_id === taskId ? { ...task, is_completed: true } : task
+              )
+          );
+      } else {
+          console.log("Görev tamamlanamadı:", response.data.message);
+      }
     } catch (error) {
       console.error("Atanan görev güncelleme hatası:", error);
     }
-  };
+};
+
+
 
   const deleteTask = async (taskId) => {
     try {
