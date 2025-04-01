@@ -48,7 +48,7 @@ const Sidebar = ({ menuOpen, setMenuOpen, darkMode, language }) => {
         <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" disabled>
           {translations[language].scoreboard}
         </button>
-        <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" disabled>
+        <button className="text-left py-2 px-4 rounded-lg hover:bg-blue-700 transition" onClick={() => { navigate("/game"); setMenuOpen(false); }}>
           {translations[language].game}
         </button>
         <button 
