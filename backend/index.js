@@ -226,6 +226,75 @@ app.delete("/api/todos/:id", async (req, res) => {
     res.status(500).json({ error: "Silme başarısız." });
   }
 });
+// ======================= GÖREV TAMAMLAMA ============================
+app.put('/complete-task/:taskId', async (req, res) => {
+  const { taskId } = req.params;
+
+  try {
+    const result = await pool.query(
+      `UPDATE assigned_tasks 
+       SET is_completed = true, completed_at = NOW()
+       WHERE task_id = $1
+       RETURNING *;`,
+      [taskId]
+    );
+
+    if (result.rows.length > 0) {
+      res.status(200).json({ message: 'Görev başarıyla tamamlandı.', task: result.rows[0] });
+    } else {
+      res.status(404).json({ message: 'Görev bulunamadı.' });
+    }
+  } catch (error) {
+    console.error('Görev tamamlama hatası:', error.message);
+    res.status(500).json({ message: 'Sunucu hatası.' });
+  }
+});
+
+
+
+// Şirket Puan Sıralaması - Tüm çalışanlar (Yöneticiler hariç)
+app.get('/scores/company', async (req, res) => {
+  try {
+      const result = await pool.query(`
+          SELECT employees.employee_id, employees.name, employees.photo_url, scores.total_score
+          FROM scores
+          JOIN employees ON scores.employee_id = employees.employee_id
+          WHERE employees.manager_id IS NOT NULL  -- Eğer Manager olarak ayırıyorsan
+          ORDER BY scores.total_score DESC;
+
+      `);
+
+      res.json(result.rows);
+  } catch (error) {
+      console.error(error);
+      res.status(500).send('Server Error');
+  }
+});
+
+// Ekip Puan Sıralaması - Aynı ekipteki çalışanlar
+app.get('/scores/team/:manager_id', async (req, res) => {
+  const { manager_id } = req.params;
+
+  if (isNaN(manager_id)) {
+    return res.status(400).json({ message: 'Geçersiz manager_id!' });
+  }
+
+  try {
+      const result = await pool.query(`
+          SELECT employees.employee_id, employees.name, employees.photo_url, scores.total_score
+          FROM scores
+          JOIN employees ON scores.employee_id = employees.employee_id
+          WHERE employees.manager_id = $1
+          ORDER BY scores.total_score DESC;
+      `, [manager_id]);
+
+      res.json(result.rows);
+  } catch (error) {
+      console.error(error);
+      res.status(500).send('Sunucu hatası');
+  }
+});
+
 // -------------------- POMODORO: Çalışma Süresi Ekleme ------------------------
 app.post("/api/pomodoro/complete", async (req, res) => {
   const { employee_id, minutes } = req.body;
@@ -267,6 +336,9 @@ app.get("/api/pomodoro/scoreboard/:department", async (req, res) => {
     res.status(500).json({ message: "Sunucu hatası" });
   }
 });
+
+
+
 
 // ======================= SUNUCUYU BAŞLAT ============================
 const PORT = process.env.PORT || 5000;
