@@ -8,6 +8,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const pool = require("./db/db");
 const employeeRoutes = require("./routes/employees");
+const messagesRoutes = require("./routes/messages");
 
 const app = express();
 const server = http.createServer(app);
@@ -22,6 +23,7 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 app.use("/employees", employeeRoutes);
+app.use("/api/messages", messagesRoutes);
 
 // ======================= SOCKET.IO ============================
 io.on("connection", (socket) => {
