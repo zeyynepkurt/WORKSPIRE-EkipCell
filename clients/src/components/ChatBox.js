@@ -51,8 +51,9 @@ const ChatBox = () => {
   
 
   return (
-    <div style={{ border: "1px solid gray", padding: "1rem", borderRadius: "10px" }}>
-      <h3>💬 Ekip İçi Chat</h3>
+    <div className="w-[320px] h-[400px] bg-white text-black rounded-lg shadow-xl border border-gray-300 p-4 flex flex-col justify-between">
+      <h3 className="text-lg font-bold mb-2">💬 Ekip İçi Chat</h3>
+
       <div style={{ height: "150px", overflowY: "scroll", marginBottom: "1rem" }}>
       {messages
         .filter((msg) => {
@@ -74,19 +75,26 @@ const ChatBox = () => {
       ))}
 
       </div>
-      <input
-        value={recipientEmail}
-        onChange={(e) => setRecipientEmail(e.target.value)}
-        placeholder="Kime? (e-posta)"
-        style={{ width: "100%", marginBottom: "0.5rem", padding: "0.5rem", borderRadius: "5px" }}
-      />
+        <input
+          value={recipientEmail}
+          onChange={(e) => setRecipientEmail(e.target.value)}
+          placeholder="Kime? (e-posta)"
+          className="w-full p-2 mb-2 rounded border border-gray-300"
+        />
 
-      <input
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        placeholder="Mesaj yaz..."
-      />
-      <button onClick={sendMessage}>Gönder</button>
+        <input
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Mesaj yaz..."
+          className="w-full p-2 mb-2 rounded border border-gray-300"
+        />
+
+        <button
+          onClick={sendMessage}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Gönder
+        </button>
     </div>
   );
 };
