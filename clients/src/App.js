@@ -6,7 +6,7 @@ import TeamMembers from "./components/TeamMembers";
 import TeamMemberDetail from "./components/TeamMemberDetails";
 import PomodoroTimer from "./components/Pomodoro";
 import ManagerHome from "./components/ManagerHome";
-import ChatPanel from "./components/Chat/ChatPanel";
+import ChatPanel from "./components/ChatBox/ChatPanel";
 import Layout from "./components/Layout";
 import Scoreboard from "./components/Scoreboard";
 import MemoryGame from "./components/MemoryGame";
