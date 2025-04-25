@@ -10,6 +10,7 @@ import ChatPanel from "./components/ChatBox/ChatPanel";
 import Layout from "./components/Layout";
 import Scoreboard from "./components/Scoreboard";
 import MemoryGame from "./components/MemoryGame";
+import Home from "./components/Home";
 
 function App() {
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
@@ -21,10 +22,10 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
 
-        {/** Giriş yapılmış kullanıcılar için Layout içeren sayfalar */}
+        {/* Giriş yapılmış kullanıcılar için Layout sarmalayıcı */}
         {isAuthenticated && (
           <Route element={<Layout />}>
-            <Route path="/home" element={<Dashboard employeeId={employeeId} />} />
+            <Route path="/home" element={<Home employeeId={employeeId} managerId={managerId} />} />
             <Route path="/calendar" element={<TaskCalendar />} />
             <Route path="/team-members" element={<TeamMembers />} />
             <Route path="/team-members/:id" element={<TeamMemberDetail />} />
@@ -32,20 +33,15 @@ function App() {
             <Route path="/messages" element={<ChatPanel />} />
             <Route path="/scoreboard" element={<Scoreboard />} />
             <Route path="/game" element={<MemoryGame />} />
+            <Route path="/manager" element={managerId === "1" ? <ManagerHome /> : <Navigate to="/" />} />
           </Route>
         )}
 
-        {/** Yönetici sayfası ayrı kontrol edilir */}
-        <Route
-          path="/manager"
-          element={isAuthenticated && managerId === "1" ? <ManagerHome /> : <Navigate to="/" />}
-        />
-
-        {/** Hatalı rota */}
+        {/* Geçersiz rota varsa giriş sayfasına yönlendir */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
   );
 }
 
-export default App; 
+export default App;
