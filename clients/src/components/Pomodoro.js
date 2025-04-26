@@ -19,11 +19,10 @@ const Pomodoro = () => {
 
   // Uygulama yüklendiğinde localStorage'den currentUser bilgilerini çekiyoruz
   useEffect(() => {
-    const userId = localStorage.getItem("userId");
+    const employeeId = localStorage.getItem("employeeId");
     const email = localStorage.getItem("userEmail");
     const department = localStorage.getItem("userDepartment");
-    if (userId && email && department) {
-      setCurrentUser({ userId, email, department });
+    if (employeeId && email && department) {setCurrentUser({ userId: employeeId, email, department });
     }
   }, []);
 
@@ -50,14 +49,14 @@ const Pomodoro = () => {
         return;
       }
   
-      const employeeId = currentUser.userId;
+      const employeeId = Number(currentUser.userId);
   
       const response = await fetch("http://localhost:5000/api/pomodoro/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           employee_id: employeeId,
-          minutes: parseFloat(completedMinutes),
+          minutes: Number(completedMinutes),
         }),
       });
   
@@ -92,7 +91,7 @@ const Pomodoro = () => {
     try {
       const dept = currentUser.department;
       console.log("Scoreboard çekiliyor, departman:", dept);
-      const res = await fetch(`http://localhost:5000/api/pomodoro/scoreboard/${dept}`);
+      const res = await fetch(`http://localhost:5000/api/pomodoro/scoreboard/${dept}?t=${Date.now()}`, { cache: "no-store" } );
       const data = await res.json();
       console.log("Scoreboard verisi:", data);
       setScoreboard(data);
