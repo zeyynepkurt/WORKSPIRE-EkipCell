@@ -17,23 +17,13 @@ const ChatWindow = ({ recipient, isGroup }) => {
       setLoading(true);
       try {
         if (isGroup) {
-          const res = await fetch(`http://localhost:5000/api/messages/group?department=${department}`)
-                                  .then(res => res.json())
-                                  .then(setMessages);
+          const res = await fetch(`http://localhost:5000/api/messages/group?department=${department}`);
           const data = await res.json();
-          if (Array.isArray(data)) setMessages(data);
-          else {
-            console.error("Beklenmeyen grup mesaj verisi:", data);
-            setMessages([]);
-          }
+          setMessages(Array.isArray(data) ? data : []);
         } else if (recipient) {
           const res = await fetch(`http://localhost:5000/api/messages/private?user1=${username}&user2=${recipient.email}`);
           const data = await res.json();
-          if (Array.isArray(data)) setMessages(data);
-          else {
-            console.error("Beklenmeyen bireysel mesaj verisi:", data);
-            setMessages([]);
-          }
+          setMessages(Array.isArray(data) ? data : []);
         }
       } catch (error) {
         console.error("Mesajlar alınamadı:", error);
