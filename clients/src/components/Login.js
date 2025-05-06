@@ -29,6 +29,8 @@ const Login = () => {
         } else {
           navigate("/home");
         }
+
+        window.location.reload();
       } else {
         alert("Giriş yapılamadı. Kullanıcı bilgileri eksik.");
       }
