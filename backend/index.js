@@ -36,16 +36,18 @@ io.on("connection", (socket) => {
     console.log(">> Gelen mesaj:", data);
 
     try {
-      await pool.query(
-        `INSERT INTO messages (username, content, timestamp, department, recipient_email, is_private)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [username, content, timestamp, department, recipient_email, is_private]
+      const result = await pool.query(
+        `INSERT INTO messages (username, content, department, recipient_email, is_private)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [username, content, department, recipient_email, is_private]
       );
-
-      io.emit("receiveMessage", { username, content, timestamp, department, recipient_email, is_private });
+    
+      io.emit("receiveMessage", result.rows[0]); // artık içinde timestamp da var
     } catch (err) {
       console.error("Mesaj kaydedilemedi:", err.message);
     }
+    
   });
 
   socket.on("disconnect", () => {
