@@ -147,7 +147,10 @@ CREATE TABLE public.messages (
     id integer NOT NULL,
     username character varying(100),
     content text NOT NULL,
-    "timestamp" timestamp with time zone DEFAULT now()
+    "timestamp" timestamp with time zone DEFAULT now(),
+    department VARCHAR(50),
+    is_private BOOLEAN DEFAULT false,
+    recipient_email VARCHAR(100)
 );
 
 
@@ -320,7 +323,7 @@ COPY public.employees (employee_id, name, email, password, department, manager_i
 -- Data for Name: messages; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.messages (id, username, content, "timestamp") FROM stdin;
+COPY public.messages (id, username, content, "timestamp", department, is_private, recipient_email) FROM stdin;
 \.
 
 
