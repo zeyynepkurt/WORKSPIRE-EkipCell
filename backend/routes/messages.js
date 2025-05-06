@@ -31,4 +31,25 @@ router.get("/private", async (req, res) => {
   }
 });
 
+// Grup (departman) mesajları
+router.get("/group", async (req, res) => {
+  const { department } = req.query;
+
+  if (!department) {
+    return res.status(400).json({ message: "Departman eksik." });
+  }
+
+  try {
+    const result = await db.query(
+      "SELECT * FROM messages WHERE is_private = false AND department = $1 ORDER BY timestamp ASC",
+      [department]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Grup mesajları alınamadı:", err.message);
+    res.status(500).json({ message: "Sunucu hatası." });
+  }
+});
+
+
 module.exports = router;
