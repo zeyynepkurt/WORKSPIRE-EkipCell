@@ -134,8 +134,10 @@ app.get("/employees/:email", async (req, res) => {
 
     const userDepartment = userResult.rows[0].department;
     const result = await pool.query(
-      "SELECT employee_id, name, manager_id, department, phone_number, photo_url FROM employees WHERE department = $1",
-      [userDepartment]
+      `SELECT employee_id, name, manager_id, department, phone_number, photo_url 
+       FROM employees 
+       WHERE department = $1 AND email <> $2`,
+      [userDepartment, email]
     );
 
     res.json(result.rows);
@@ -173,7 +175,6 @@ app.get("/api/messages", async (req, res) => {
     res.status(500).json({ error: "Mesajlar yüklenemedi" });
   }
 });
-
 
 
 // ======================= TODO CRUD ============================
@@ -253,7 +254,6 @@ app.put('/complete-task/:taskId', async (req, res) => {
     res.status(500).json({ message: 'Sunucu hatası.' });
   }
 });
-
 
 
 // Şirket Puan Sıralaması - Tüm çalışanlar (Yöneticiler hariç)
@@ -340,8 +340,6 @@ app.get("/api/pomodoro/scoreboard/:department", async (req, res) => {
     res.status(500).json({ message: "Sunucu hatası" });
   }
 });
-
-
 
 
 // ======================= SUNUCUYU BAŞLAT ============================
