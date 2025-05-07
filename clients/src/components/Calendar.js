@@ -86,10 +86,18 @@ const TaskCalendar = () => {
         console.error("Ekip üyeleri alınamadı:", err);
       }
     };
-  
+    const fetchMeetings = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/team_calendar_it1"); // departman adını uygun şekilde koy
+        const data = await res.json();
+        setMeetings(data);
+      } catch (err) {
+        console.error("Toplantılar alınamadı:", err);
+      }
+    };
+    if (viewMode === "team") fetchMeetings();
     if (userEmail) fetchTeamMembers();
-  }, [userEmail]);
-  
+  }, [userEmail],[viewMode]);
 
   const previousMonth = () => {
     if (selectedMonth === 0) {
@@ -195,10 +203,8 @@ const TaskCalendar = () => {
       return;
     }
   
-    // ÇAKIŞMA KONTROLÜ
     const newStart = dayjs(`${newTaskDate}T${startTime}`);
     const newEnd = dayjs(`${newTaskDate}T${endTime}`);
-  
     const sameDayMeetings = meetings.filter(m => m.date === newTaskDate);
     const hasConflict = sameDayMeetings.some(m => {
       const [mStartStr, mEndStr] = m.time.split(" - ");
@@ -214,7 +220,6 @@ const TaskCalendar = () => {
       return;
     }
   
-    // Toplantıyı oluştur
     const newMeeting = {
       id: meetings.length + 1,
       date: newTaskDate,
@@ -223,13 +228,41 @@ const TaskCalendar = () => {
       participants: selectedParticipants.join(", ")
     };
   
-    setMeetings(prev => [...prev, newMeeting]);
+    // Ekip takvimine ekle
+setMeetings(prev => [...prev, newMeeting]);
+
+// ✅ Bireysel takvimler için: katılımcılar + giriş yapan kişi
+  const participantsIncludingSelf = [...selectedParticipants];
+
+  // Giriş yapan kişi name listesinde olmayabilir, sadece email ile ekle
+  participantsIncludingSelf.forEach((participantName) => {
+    const member = teamMembers.find(m => m.name === participantName);
+    if (member) {
+      setTasks(prev => [...prev, {
+        id: prev.length + 1,
+        date: newTaskDate,
+        time: `${startTime} - ${endTime}`,
+        title: newMeetingTitle.trim(),
+        owner: member.email || member.employee_id || member.name
+      }]);
+    }
+  });
+
+  // Giriş yapan kişiyi ayrıca bireysel takvime ekle
+  setTasks(prev => [...prev, {
+    id: prev.length + 1,
+    date: newTaskDate,
+    time: `${startTime} - ${endTime}`,
+    title: newMeetingTitle.trim(),
+    owner: userEmail
+  }]);
+
+  
     setNewMeetingTitle("");
     setSelectedParticipants([]);
     setNewMeetingParticipants("");
     setErrorMessage("");
   };
-  
   
   return (
     <div className={`w-full pt-16 px-4 md:px-8 lg:px-16 ${darkMode ? "bg-[#0f172a] text-white" : "bg-white text-gray-900"}`}>
