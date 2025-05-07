@@ -1,7 +1,7 @@
 import { FaBars, FaBell, FaEnvelope, FaUserCircle, FaSearch, FaSun, FaMoon } from "react-icons/fa";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
+import socket from "../socket";
 import ChatBox from "./ChatBox";
 
 const Navbar = ({ darkMode, setDarkMode, language, setLanguage, setMenuOpen }) => {
@@ -9,19 +9,38 @@ const Navbar = ({ darkMode, setDarkMode, language, setLanguage, setMenuOpen }) =
     tr: { search: "Ara...", logout: "Çıkış Yap" },
     en: { search: "Search...", logout: "Log Out" }
   };
-  
+
   const [chatOpen, setChatOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const navigate = useNavigate();
+  const currentUser = localStorage.getItem("userEmail");
+  const department = localStorage.getItem("userDepartment");
 
-  // Çıkış yapma fonksiyonu: tüm localStorage temizlenir ve giriş ekranı iki kez yenilenir
+  // ✅ Socket üzerinden yeni mesaj geldiğinde sayacı artır
+  useEffect(() => {
+    const handleMessage = (msg) => {
+      const isToMe = msg.recipient_email === currentUser;
+      const isSameDept = msg.department === department;
+      const isPrivate = msg.is_private;
+
+      if (
+        (isPrivate && isToMe) ||
+        (!isPrivate && isSameDept && msg.username !== currentUser)
+      ) {
+        setUnreadCount((prev) => prev + 1);
+      }
+    };
+
+    socket.on("receiveMessage", handleMessage);
+    return () => socket.off("receiveMessage", handleMessage);
+  }, [currentUser, department]);
+
+  // Çıkış yapma fonksiyonu
   const handleLogout = () => {
-    // Tüm yerel depolama temizleniyor
     localStorage.clear();
-
-    // Giriş sayfasına yönlendir
     navigate("/login");
-    // İkinci yenileme için küçük bir gecikme ekleyerek iki kez reload
     window.location.reload();
     setTimeout(() => {
       window.location.reload();
@@ -45,10 +64,21 @@ const Navbar = ({ darkMode, setDarkMode, language, setLanguage, setMenuOpen }) =
       </div>
 
       <div className="flex items-center gap-6">
-        <FaEnvelope
-          className="text-2xl cursor-pointer"
-          onClick={() => navigate("/messages")}
-        />
+        {/* Zarf ikonu + bildirim rozeti */}
+        <div className="relative">
+          <FaEnvelope
+            className="text-2xl cursor-pointer"
+            onClick={() => {
+              navigate("/messages");
+              setUnreadCount(0); // ikon tıklanınca sıfırla
+            }}
+          />
+          {unreadCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-1.5 rounded-full">
+              {unreadCount}
+            </span>
+          )}
+        </div>
 
         {chatOpen && (
           <div className="absolute right-4 top-16 md:right-8 z-50">
@@ -79,6 +109,7 @@ const Navbar = ({ darkMode, setDarkMode, language, setLanguage, setMenuOpen }) =
         <button onClick={() => setDarkMode(!darkMode)} className="text-xl">
           {darkMode ? <FaSun className="text-yellow-400" /> : <FaMoon className="text-yellow-500" />}
         </button>
+
         <div className="flex gap-2">
           <button
             className={`px-3 py-1 rounded-lg text-sm ${language === "tr" ? "bg-yellow-500" : "bg-gray-500"}`}

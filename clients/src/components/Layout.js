@@ -1,12 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
+import socket from "../socket"; // socket.js dosyanın yolu buysa
+
 
 const Layout = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState("tr");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    socket.on("receiveMessage", (msg) => {
+      const currentEmail = localStorage.getItem("userEmail");
+      const isMine = msg.username === currentEmail;
+      const isToMe = msg.recipient_email === currentEmail;
+  
+      if (!isMine && (msg.department === localStorage.getItem("userDepartment") || isToMe)) {
+        setUnreadCount((prev) => prev + 1);
+      }
+    });
+  
+    return () => socket.off("receiveMessage");
+  }, []);
+  
 
   return (
     <div className={`${darkMode ? "bg-[#0f172a] text-white" : "bg-white text-gray-900"} min-h-screen transition-colors duration-300`}>
@@ -17,6 +35,7 @@ const Layout = () => {
         language={language}
         setLanguage={setLanguage}
         setMenuOpen={setMenuOpen}
+        unreadCount={unreadCount}
       />
 
       <div className="flex">
