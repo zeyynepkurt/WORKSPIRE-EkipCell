@@ -1,30 +1,45 @@
 import { useEffect, useState, useRef } from "react";
+import { useOutletContext } from "react-router-dom";
 import socket from "../../socket";
 import MessageBubble from "./MessageBubble";
 
-const ChatWindow = ({ recipient, isGroup }) => {
+const ChatWindow = ({ recipient, isGroup, language }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef();
+  const { darkMode } = useOutletContext();
 
   const username = localStorage.getItem("userEmail");
   const department = localStorage.getItem("userDepartment");
 
-  // Mesaj geçmişini yükle (grup veya bireysel)
+  const translations = {
+    tr: {
+      teamChat: "💬 Ekip Sohbeti",
+      loading: "Yükleniyor...",
+      noMessages: "Henüz mesaj yok.",
+      placeholder: "Mesaj yaz...",
+      send: "Gönder",
+    },
+    en: {
+      teamChat: "💬 Team Chat",
+      loading: "Loading...",
+      noMessages: "No messages yet.",
+      placeholder: "Type a message...",
+      send: "Send",
+    },
+  };
+
   useEffect(() => {
     const fetchMessages = async () => {
       setLoading(true);
       try {
-        if (isGroup) {
-          const res = await fetch(`http://localhost:5000/api/messages/group?department=${department}`);
-          const data = await res.json();
-          setMessages(Array.isArray(data) ? data : []);
-        } else if (recipient) {
-          const res = await fetch(`http://localhost:5000/api/messages/private?user1=${username}&user2=${recipient.email}`);
-          const data = await res.json();
-          setMessages(Array.isArray(data) ? data : []);
-        }
+        const url = isGroup
+          ? `http://localhost:5000/api/messages/group?department=${department}`
+          : `http://localhost:5000/api/messages/private?user1=${username}&user2=${recipient.email}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        setMessages(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Mesajlar alınamadı:", error);
         setMessages([]);
@@ -36,7 +51,6 @@ const ChatWindow = ({ recipient, isGroup }) => {
     fetchMessages();
   }, [recipient, isGroup]);
 
-  // Yeni gelen mesajları dinle
   useEffect(() => {
     const handleIncoming = (msg) => {
       if (isGroup) {
@@ -56,7 +70,6 @@ const ChatWindow = ({ recipient, isGroup }) => {
     return () => socket.off("receiveMessage", handleIncoming);
   }, [recipient, isGroup]);
 
-  // Mesaj gönder
   const sendMessage = () => {
     if (input.trim()) {
       socket.emit("sendMessage", {
@@ -70,24 +83,23 @@ const ChatWindow = ({ recipient, isGroup }) => {
     }
   };
 
-  // Scroll to bottom on message update
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const title = isGroup ? "💬 Ekip Sohbeti" : `${recipient.name} (${recipient.email})`;
+  const title = isGroup
+    ? translations[language].teamChat
+    : `${recipient.name} (${recipient.email})`;
 
   return (
     <div className="h-full flex flex-col">
-      {/* Başlık */}
-      <div className="p-4 border-b font-semibold text-lg bg-white">{title}</div>
+      <div className={'p-4 border-b font-semibold text-lg ${darkMode ? "bg-[#1e293b] text-white" : "bg-gray-100 text-black"}'}>{title}</div>
 
-      {/* Mesajlar */}
-      <div className="flex-1 p-4 overflow-y-auto bg-gray-100 space-y-2">
+      <div className={`flex-1 p-4 overflow-y-auto ${darkMode ? "bg-[#1e293b] text-white" : "bg-gray-100 text-black"} space-y-2`}>
         {loading ? (
-          <div className="text-center text-gray-500">Yükleniyor...</div>
+          <div className="text-center text-gray-500">{translations[language].loading}</div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-400 italic">Henüz mesaj yok.</div>
+          <div className="text-center text-gray-400 italic">{translations[language].noMessages}</div>
         ) : (
           messages.map((msg, i) => (
             <MessageBubble key={i} message={msg} isOwn={msg.username === username} />
@@ -96,13 +108,12 @@ const ChatWindow = ({ recipient, isGroup }) => {
         <div ref={bottomRef} />
       </div>
 
-      {/* Mesaj yazma alanı */}
-      <div className="p-4 border-t bg-white flex gap-2">
+      <div className={`p-4 border-t ${darkMode ? "bg-[#1e293b]" : "bg-white"} flex gap-2`}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Mesaj yaz..."
+          placeholder={translations[language].placeholder}
           className="flex-1 p-2 rounded border"
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
@@ -110,7 +121,7 @@ const ChatWindow = ({ recipient, isGroup }) => {
           onClick={sendMessage}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          Gönder
+          {translations[language].send}
         </button>
       </div>
     </div>

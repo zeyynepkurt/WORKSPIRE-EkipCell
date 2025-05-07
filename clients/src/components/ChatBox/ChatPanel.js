@@ -1,17 +1,31 @@
 import { useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import ChatWindow from "./ChatWindow";
-import UserList from "./UserList";
 import NewChatModal from "./NewChatModal";
 
 const ChatPanel = () => {
-    
-  const [activeChat, setActiveChat] = useState(null); // { type: "group" } veya { type: "private", user: {...} }
+  const [activeChat, setActiveChat] = useState(null);
   const [previousContacts, setPreviousContacts] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const currentUserEmail = localStorage.getItem("userEmail");
+  const { language, darkMode } = useOutletContext();
+
+  const translations = {
+    tr: {
+      chats: "Sohbetler",
+      new: "+ Yeni",
+      teamChat: "💬 Ekip Sohbeti",
+      empty: "Sohbete başlamak için kişi/grup seç"
+    },
+    en: {
+      chats: "Chats",
+      new: "+ New",
+      teamChat: "💬 Team Chat",
+      empty: "Select a user/group to start chatting"
+    },
+  };
 
   useEffect(() => {
-    // Mesaj geçmişinden kimlerle konuşulduysa onları getir
     fetch("http://localhost:5000/api/messages")
       .then(res => res.json())
       .then(data => {
@@ -24,7 +38,6 @@ const ChatPanel = () => {
 
         const uniqueEmails = [...new Set(contacts)];
 
-        // Kullanıcı bilgilerini e-posta ile eşle
         fetch("http://localhost:5000/employees")
           .then(res => res.json())
           .then(allUsers => {
@@ -34,36 +47,28 @@ const ChatPanel = () => {
       });
   }, []);
 
-  // ✨ Yeni bireysel sohbet
   const handleStartPrivateChat = (user) => {
     setActiveChat({ type: "private", user });
     setShowModal(false);
   };
 
-
   return (
-    <div className="w-full h-screen flex">
-      {/* Sol Panel */}
-      <div className="w-1/3 min-w-[250px] max-w-[300px] bg-white border-r overflow-y-auto p-4">
+    <div className={`w-full h-screen flex ${darkMode ? "bg-[#0f172a] text-white" : "bg-white text-gray-900"}`}>
+      <div className={`w-1/3 min-w-[250px] max-w-[300px] ${darkMode ? "bg-gray-900 text-white" : "bg-white text-gray-900"} border-r overflow-y-auto p-4`}>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold">Sohbetler</h2>
-          <button
-            className="text-blue-600 font-bold text-sm underline"
-            onClick={() => setShowModal(true)}
-          >
-            + Yeni
+          <h2 className="text-lg font-bold">{translations[language].chats}</h2>
+          <button className="text-blue-600 font-bold text-sm underline" onClick={() => setShowModal(true)}>
+            {translations[language].new}
           </button>
         </div>
 
-        {/* Ekip Sohbeti kutusu */}
         <div
-          className={`p-3 mb-4 rounded-lg cursor-pointer bg-blue-100 hover:bg-blue-200 border border-blue-300`}
+          className={`p-3 mb-4 rounded-lg cursor-pointer ${darkMode ? "bg-gray-900 text-white" : "bg-white text-gray-900"} border border-blue-300`}
           onClick={() => setActiveChat({ type: "group" })}
         >
-          💬 Ekip Sohbeti
+          {translations[language].teamChat}
         </div>
 
-        {/* Bireysel konuşmalar */}
         <ul className="space-y-2">
           {previousContacts.map(user => (
             <li
@@ -80,31 +85,28 @@ const ChatPanel = () => {
         </ul>
       </div>
 
-      {/* Sağ Panel */}
-      <div className="flex-1 bg-gray-50 relative">
+      <div className={`flex-1 ${darkMode ? "bg-[#0f172a] text-white" : "bg-gray-50 text-gray-900"} relative`}>
         {activeChat ? (
           <ChatWindow
             recipient={activeChat.type === "group" ? null : activeChat.user}
             isGroup={activeChat.type === "group"}
+            language={language}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-500 text-lg">
-            Sohbete başlamak için kişi/grup seç
+            {translations[language].empty}
           </div>
         )}
       </div>
 
-      {/* Modal */}
       {showModal && (
         <NewChatModal
-            onClose={() => setShowModal(false)}
-            onStartPrivateChat={handleStartPrivateChat}
+          onClose={() => setShowModal(false)}
+          onStartPrivateChat={handleStartPrivateChat}
         />
-        )}
-
+      )}
     </div>
   );
 };
 
 export default ChatPanel;
-
