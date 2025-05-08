@@ -25,8 +25,10 @@ const Login = () => {
 
         // Girişten sonra manager mı employee mı karar veriyoruz
         if (parseInt(res.data.manager_id) === 1) {
+          localStorage.setItem("__EKIPCELL_ROLE__", "manager"); // 👈 Rolü burada ekle
           navigate("/manager");
         } else {
+          localStorage.setItem("__EKIPCELL_ROLE__", "employee"); // 👈 ve burada da
           navigate("/home");
         }
 
@@ -40,8 +42,6 @@ const Login = () => {
     }
   };
 
-
-    
 
   return (
     <div style={darkMode ? styles.darkContainer : styles.lightContainer}>
