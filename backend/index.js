@@ -10,6 +10,7 @@ const pool = require("./db/db");
 const employeeRoutes = require("./routes/employees");
 const messagesRoutes = require("./routes/messages");
 const meetingsRoute = require('./routes/meetings');
+const personalTasksRoute = require('./routes/personalTasks');
 
 
 
@@ -28,6 +29,8 @@ app.use(express.json());
 app.use("/employees", employeeRoutes);
 app.use("/api/messages", messagesRoutes);
 app.use('/meetings', meetingsRoute);
+app.use('/personal-tasks', personalTasksRoute);
+
 
 // ======================= SOCKET.IO ============================
 io.on("connection", (socket) => {
