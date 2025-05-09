@@ -621,6 +621,10 @@ ALTER TABLE ONLY public.scores
 ALTER TABLE ONLY public.todos
     ADD CONSTRAINT todos_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.employees(employee_id) ON DELETE CASCADE;
 
+-- Drop if exists to avoid duplication errors
+DROP TABLE IF EXISTS public.personal_tasks;
+
+-- Create personal_tasks table
 CREATE TABLE public.personal_tasks (
     id SERIAL PRIMARY KEY,
     employee_id INTEGER NOT NULL,
@@ -628,10 +632,11 @@ CREATE TABLE public.personal_tasks (
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
+    FOREIGN KEY (employee_id) REFERENCES public.employees(employee_id) ON DELETE CASCADE
 );
 
 ALTER TABLE public.personal_tasks OWNER TO postgres;
+
 
 --
 -- PostgreSQL database dump complete
