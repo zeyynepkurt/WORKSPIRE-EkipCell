@@ -183,6 +183,49 @@ app.get("/api/messages", async (req, res) => {
   }
 });
 
+app.post("/employees/assign-task", async (req, res) => {
+  const { employee_id, manager_id, task_name, task_description, deadline, score } = req.body;
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO assigned_tasks (employee_id, manager_id, task_name, task_description, deadline, score)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [employee_id, manager_id, task_name, task_description, deadline, score]
+    );
+
+   await pool.query(
+      `INSERT INTO notifications (employee_id, message) VALUES ($1, $2)`,
+      [parseInt(employee_id), `Size "${task_name}" görevi atandı.`]
+    );
+
+    // CANLI BİLDİRİM EMİT ET
+    io.emit("receiveNotification", {
+  employee_id: parseInt(employee_id, 10),
+  message: `Size "${task_name}" görevi atandı.`
+  });
+    res.status(201).json({ message: "Görev başarıyla atandı", task: result.rows[0] });
+  } catch (error) {
+    console.error("Görev atama hatası:", error.message);
+    res.status(500).json({ message: "Sunucu hatası" });
+  }
+});
+
+
+// ======================= NOTIFICATION ============================
+app.get("/api/notifications/:employeeId", async (req, res) => {
+  const { employeeId } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM notifications WHERE employee_id = $1 ORDER BY created_at DESC`,
+      [employeeId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Bildirimler alınamadı:", err.message);
+    res.status(500).json({ message: "Sunucu hatası" });
+  }
+});
 
 // ======================= TODO CRUD ============================
 app.get("/api/todos/:userId", async (req, res) => {
