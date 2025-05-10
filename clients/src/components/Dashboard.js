@@ -199,7 +199,17 @@ const Dashboard = () => {
             <p className="text-center py-2">{translations[language].noTask}</p>
           )}
         </div>
-
+      {/* Sağ alt köşedeki AI simgesi */}
+              <div
+                className="fixed bottom-6 right-6 z-50 cursor-pointer"
+                onClick={() => alert("AI Task Prioritization henüz aktif değil.")}
+              >
+                <img
+                  src={require("../assets/ai-icon.png")}
+                  alt="AI Prioritize"
+                  className="w-20 h-20 hover:scale-105 transition-transform duration-200"
+                />
+              </div>
       </div>
     </div>
   );
