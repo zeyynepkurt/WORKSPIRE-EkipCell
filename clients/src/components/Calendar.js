@@ -151,6 +151,14 @@ const TaskCalendar = () => {
     if (userEmail) fetchTeamMembers();
   },  [userEmail, viewMode]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    if (tab === "team" || tab === "personal") {
+      setViewMode(tab);
+    }
+  }, []);
+
   const previousMonth = () => {
     if (selectedMonth === 0) {
       setSelectedMonth(11);
@@ -340,10 +348,16 @@ const addMeeting = async () => {
   return (
     <div className={`w-full pt-16 px-4 md:px-8 lg:px-16 ${darkMode ? "bg-[#0f172a] text-white" : "bg-white text-gray-900"}`}>
       <div className="flex justify-center mb-4">
-        <button className={`px-6 py-2 rounded-l-lg ${viewMode === "personal" ? "bg-blue-600 text-white" : "bg-gray-300"}`} onClick={() => setViewMode("personal")}>
+        <button
+          className={`px-6 py-2 rounded-l-lg ${viewMode === "personal" ? "bg-blue-600 text-white" : "bg-gray-300"}`}
+          onClick={() => window.location.href = "/calendar?tab=personal"}
+        >
           {translations[language].personal}
         </button>
-        <button className={`px-6 py-2 rounded-r-lg ${viewMode === "team" ? "bg-blue-600 text-white" : "bg-gray-300"}`} onClick={() => setViewMode("team")}>
+        <button
+          className={`px-6 py-2 rounded-r-lg ${viewMode === "team" ? "bg-blue-600 text-white" : "bg-gray-300"}`}
+          onClick={() => window.location.href = "/calendar?tab=team"}
+        >
           {translations[language].team}
         </button>
       </div>
