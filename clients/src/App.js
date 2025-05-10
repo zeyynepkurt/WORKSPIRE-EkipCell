@@ -10,6 +10,7 @@ import PomodoroTimer from "./components/Pomodoro";
 import ChatPanel from "./components/ChatBox/ChatPanel";
 import Scoreboard from "./components/Scoreboard";
 import MemoryGame from "./components/MemoryGame";
+import PrioritizerPage from "./pages/PrioritizerPage";
 
 function App() {
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
@@ -32,6 +33,7 @@ function App() {
             <Route path="/scoreboard" element={<Scoreboard />} />
             <Route path="/game" element={<MemoryGame />} />
             <Route path="/manager" element={managerId === "1" ? <ManagerHome /> : <Navigate to="/home" />} />
+            <Route path="/prioritizer" element={<PrioritizerPage />} />
           </Route>
         )}
 
