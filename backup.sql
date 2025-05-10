@@ -1,399 +1,748 @@
-const express = require("express");
-const cors = require("cors");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
+--
+-- PostgreSQL database dump
+--
 
-const http = require("http");
-const { Server } = require("socket.io");
-const pool = require("./db/db");
-const employeeRoutes = require("./routes/employees");
-const messagesRoutes = require("./routes/messages");
-const meetingsRoute = require('./routes/meetings');
-const personalTasksRoute = require('./routes/personalTasks');
+-- Dumped from database version 15.12 (Debian 15.12-1.pgdg120+1)
+-- Dumped by pg_dump version 15.12 (Debian 15.12-1.pgdg120+1)
 
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
 
+--
+-- Name: update_score(); Type: FUNCTION; Schema: public; Owner: postgres
+--
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
-});
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use("/employees", employeeRoutes);
-app.use("/api/messages", messagesRoutes);
-app.use('/meetings', meetingsRoute);
-app.use('/personal-tasks', personalTasksRoute);
-
-
-// ======================= SOCKET.IO ============================
-io.on("connection", (socket) => {
-  console.log("🔌 Yeni kullanıcı bağlandı");
-
-  socket.on("sendMessage", async (data) => {
-    const { username, content, department, recipient_email, is_private } = data;
-    const timestamp = new Date();
-
-    console.log(">> Gelen mesaj:", data);
-
-    try {
-      const result = await pool.query(
-        `INSERT INTO messages (username, content, department, recipient_email, is_private)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
-        [username, content, department, recipient_email, is_private]
-      );
-    
-      io.emit("receiveMessage", result.rows[0]); // artık içinde timestamp da var
-    } catch (err) {
-      console.error("Mesaj kaydedilemedi:", err.message);
-    }
-    
-  });
-
-  socket.on("disconnect", () => {
-    console.log("❌ Kullanıcı ayrıldı");
-  });
-});
-
-// ======================= LOGIN ============================
-app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const userResult = await pool.query(
-      "SELECT employee_id, email, password, department, manager_id FROM employees WHERE email = $1",
-      [email]
-    );
-
-    if (userResult.rows.length === 0) {
-      return res.status(400).json({ message: "Kullanıcı bulunamadı." });
-    }
-
-    const user = userResult.rows[0];
-    const validPassword = await bcrypt.compare(password, user.password);
-
-    if (!validPassword) {
-      return res.status(400).json({ message: "Şifre yanlış." });
-    }
-
-    const token = jwt.sign(
-      { employee_id: user.employee_id, manager_id: user.manager_id },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    res.json({
-      token,
-      email: user.email,
-      department: user.department,
-      employee_id: user.employee_id,
-      manager_id: user.manager_id,
-    });
-  } catch (err) {
-    console.error("Login hatası:", err.message);
-    res.status(500).json({ message: "Sunucu hatası" });
-  }
-});
-
-// ======================= GET REQUESTLER ============================
-app.get("/", (req, res) => {
-  res.send("Todo + Chat API çalışıyor 🚀");
-});
-
-app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "API is running" });
-});
-
-app.get("/employees", async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        employee_id AS id, 
-        name, 
-        email, 
-        department, 
-        phone_number, 
-        photo_url, 
-        CASE WHEN manager_id = 1 THEN 'Manager' ELSE department END AS role
-      FROM employees
-    `);
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Veriler getirilemedi:", err.message);
-    res.status(500).json({ message: "Veriler getirilemedi!" });
-  }
-});
-
-app.get("/employees/:email", async (req, res) => {
-  try {
-    const { email } = req.params;
-    const userResult = await pool.query("SELECT department FROM employees WHERE email = $1", [email]);
-
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ message: "Kullanıcı bulunamadı!" });
-    }
-
-    const userDepartment = userResult.rows[0].department;
-    const result = await pool.query(
-      `SELECT employee_id, name, manager_id, department, phone_number, photo_url 
-       FROM employees 
-       WHERE department = $1 AND email <> $2`,
-      [userDepartment, email]
-    );
-
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Departman çalışanları getirilemedi:", err.message);
-    res.status(500).json({ message: "Veriler getirilemedi!" });
-  }
-});
-
-app.get("/assigned-tasks/:employeeId", async (req, res) => {
-  const { employeeId } = req.params;
-  try {
-    const result = await pool.query(
-      "SELECT * FROM assigned_tasks WHERE employee_id = $1",
-      [employeeId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Atanmış görev yok." });
-    }
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Atanan görevler getirilemedi:", error.message);
-    res.status(500).json({ message: "Sunucu hatası." });
-  }
-});
-
-app.get("/api/messages", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM messages ORDER BY timestamp ASC");
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Mesajlar alınamadı:", err.message);
-    res.status(500).json({ error: "Mesajlar yüklenemedi" });
-  }
-});
-
-app.post("/employees/assign-task", async (req, res) => {
-  const { employee_id, manager_id, task_name, task_description, deadline, score } = req.body;
-
-  try {
-    const result = await pool.query(
-      `INSERT INTO assigned_tasks (employee_id, manager_id, task_name, task_description, deadline, score)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [employee_id, manager_id, task_name, task_description, deadline, score]
-    );
-
-   await pool.query(
-      `INSERT INTO notifications (employee_id, message) VALUES ($1, $2)`,
-      [parseInt(employee_id), `Size "${task_name}" görevi atandı.`]
-    );
-
-    // CANLI BİLDİRİM EMİT ET
-    io.emit("receiveNotification", {
-  employee_id: parseInt(employee_id, 10),
-  message: `Size "${task_name}" görevi atandı.`
-  });
-    res.status(201).json({ message: "Görev başarıyla atandı", task: result.rows[0] });
-  } catch (error) {
-    console.error("Görev atama hatası:", error.message);
-    res.status(500).json({ message: "Sunucu hatası" });
-  }
-});
+CREATE FUNCTION public.update_score() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    task_score INT;
+    completed_date DATE;
+    days_difference INT;
+    new_score INT;
+BEGIN
+    -- Take assigned task point
+      SELECT score INTO task_score FROM assigned_tasks WHERE task_id = NEW.task_id;
+    -- Different rules for the date that the task is completed
+    completed_date := NEW.completed_at::date;
+    days_difference := completed_date - NEW.deadline;
+    IF days_difference < 0 THEN  -- Task completed early (Each early day gives +5 points)
+        new_score := task_score + ABS(days_difference) * 5;
+    ELSIF days_difference = 0 THEN  -- Task completed on time (No points added or removed)
+        new_score := task_score;
+    ELSE  -- Task completed late (Each late day deducts -5 points)
+        new_score := task_score - (days_difference * 5);
+    END IF;
 
 
-// ======================= NOTIFICATION ============================
-app.get("/api/notifications/:employeeId", async (req, res) => {
-  const { employeeId } = req.params;
-  try {
-    const result = await pool.query(
-      `SELECT * FROM notifications WHERE employee_id = $1 ORDER BY created_at DESC`,
-      [employeeId]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Bildirimler alınamadı:", err.message);
-    res.status(500).json({ message: "Sunucu hatası" });
-  }
-});
 
-// ======================= TODO CRUD ============================
-app.get("/api/todos/:userId", async (req, res) => {
-  const { userId } = req.params;
-  try {
-    const result = await pool.query(
-      "SELECT * FROM todos WHERE user_id = $1 ORDER BY created_at DESC",
-      [userId]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error("ToDo getirme hatası:", err.message);
-    res.status(500).json({ error: "Veriler alınamadı." });
-  }
-});
+    -- Update the score in the scores table
+    -- If the employee_id already exists, update the score; otherwise, insert a new record
+    -- Use ON CONFLICT to handle the case where the employee_id already exists
 
-app.post("/api/todos", async (req, res) => {
-  const { user_id, title, description } = req.body;
-  try {
-    const result = await pool.query(
-      "INSERT INTO todos (user_id, title, description) VALUES ($1, $2, $3) RETURNING *",
-      [user_id, title, description]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error("Görev eklenemedi:", err.message);
-    res.status(500).json({ error: "Görev eklenemedi." });
-  }
-});
+    INSERT INTO scores (employee_id, total_score) 
+    VALUES (NEW.employee_id, new_score)
+    ON CONFLICT (employee_id)
+    DO UPDATE SET total_score = scores.total_score + new_score,
+                  last_updated = NOW();
+    RETURN NEW;
+END;
 
-app.put("/api/todos/:id", async (req, res) => {
-  const { id } = req.params;
-  const { is_completed } = req.body;
-  try {
-    const result = await pool.query(
-      "UPDATE todos SET is_completed = $1 WHERE todo_id = $2 RETURNING *",
-      [is_completed, id]
-    );
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error("Güncelleme başarısız:", err.message);
-    res.status(500).json({ error: "Güncelleme başarısız." });
-  }
-});
+$$;
 
-app.delete("/api/todos/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query("DELETE FROM todos WHERE todo_id = $1", [id]);
-    res.status(204).send();
-  } catch (err) {
-    console.error("Silme başarısız:", err.message);
-    res.status(500).json({ error: "Silme başarısız." });
-  }
-});
-// ======================= GÖREV TAMAMLAMA ============================
-app.put('/complete-task/:taskId', async (req, res) => {
-  const { taskId } = req.params;
+ALTER FUNCTION public.update_score() OWNER TO postgres;
+SET default_tablespace = '';
+SET default_table_access_method = heap;
 
-  try {
-    const result = await pool.query(
-      `UPDATE assigned_tasks 
-       SET is_completed = true, completed_at = NOW()
-       WHERE task_id = $1
-       RETURNING *;`,
-      [taskId]
-    );
+--
+-- Name: assigned_tasks; Type: TABLE; Schema: public; Owner: postgres
+--
 
-    if (result.rows.length > 0) {
-      res.status(200).json({ message: 'Görev başarıyla tamamlandı.', task: result.rows[0] });
-    } else {
-      res.status(404).json({ message: 'Görev bulunamadı.' });
-    }
-  } catch (error) {
-    console.error('Görev tamamlama hatası:', error.message);
-    res.status(500).json({ message: 'Sunucu hatası.' });
-  }
-});
+CREATE TABLE public.assigned_tasks (
+    task_id integer NOT NULL,
+    employee_id integer,
+    manager_id integer,
+    task_name character varying(255) NOT NULL,
+    task_description text,
+    deadline date,
+    score integer,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    is_completed boolean DEFAULT false,
+    completed_at timestamp without time zone
+);
 
 
-// Şirket Puan Sıralaması - Tüm çalışanlar (Yöneticiler hariç)
-app.get('/scores/company', async (req, res) => {
-  try {
-      const result = await pool.query(`
-          SELECT employees.employee_id, employees.name, employees.photo_url, scores.total_score
-          FROM scores
-          JOIN employees ON scores.employee_id = employees.employee_id
-          WHERE employees.manager_id IS NOT NULL  -- Eğer Manager olarak ayırıyorsan
-          ORDER BY scores.total_score DESC;
+ALTER TABLE public.assigned_tasks OWNER TO postgres;
 
-      `);
+--
+-- Name: assigned_tasks_task_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
 
-      res.json(result.rows);
-  } catch (error) {
-      console.error(error);
-      res.status(500).send('Server Error');
-  }
-});
-
-// Ekip Puan Sıralaması - Aynı ekipteki çalışanlar
-app.get('/scores/team/:manager_id', async (req, res) => {
-  const { manager_id } = req.params;
-
-  if (isNaN(manager_id)) {
-    return res.status(400).json({ message: 'Geçersiz manager_id!' });
-  }
-
-  try {
-      const result = await pool.query(`
-          SELECT employees.employee_id, employees.name, employees.photo_url, scores.total_score
-          FROM scores
-          JOIN employees ON scores.employee_id = employees.employee_id
-          WHERE employees.manager_id = $1
-          ORDER BY scores.total_score DESC;
-      `, [manager_id]);
-
-      res.json(result.rows);
-  } catch (error) {
-      console.error(error);
-      res.status(500).send('Sunucu hatası');
-  }
-});
-
-// -------------------- POMODORO: Çalışma Süresi Ekleme ------------------------
-app.post("/api/pomodoro/complete", async (req, res) => {
-  const { employee_id, minutes } = req.body;
-
-  try {
-    const result = await pool.query(`
-      INSERT INTO work_sessions (employee_id, minutes)
-      VALUES ($1, $2)
-      ON CONFLICT (employee_id)
-      DO UPDATE SET minutes = work_sessions.minutes + EXCLUDED.minutes
-      RETURNING *
-    `, [employee_id, minutes]);
-
-    console.log("Database güncellemesi başarılı:", result.rows[0]);
-    res.json({ success: true, message: "Pomodoro kaydedildi.", data: result.rows[0] });
-  } catch (error) {
-    console.error("Pomodoro kaydetme hatası:", error.message);
-    res.status(500).json({ success: false, message: "Sunucu hatası." });
-  }
-});
-
-// -------------------- POMODORO: Departman Skoru Çekme ------------------------
-app.get("/api/pomodoro/scoreboard/:department", async (req, res) => {
-  const { department } = req.params;
-
-  try {
-    const result = await pool.query(`
-      SELECT e.employee_id, e.name, e.department, COALESCE(w.minutes, 0) AS minutes
-      FROM employees e
-      LEFT JOIN work_sessions w ON e.employee_id = w.employee_id
-      WHERE e.department = $1
-      ORDER BY minutes DESC;
-    `, [department]);
-
-    console.log("Departman Skoru Başarıyla Çekildi.");
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Scoreboard hatası:", err.message);
-    res.status(500).json({ message: "Sunucu hatası" });
-  }
-});
+CREATE SEQUENCE public.assigned_tasks_task_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
 
 
-// ======================= SUNUCUYU BAŞLAT ============================
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`🚀 Sunucu ${PORT} numaralı portta çalışıyor`);
-});
+ALTER TABLE public.assigned_tasks_task_id_seq OWNER TO postgres;
+
+--
+-- Name: assigned_tasks_task_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.assigned_tasks_task_id_seq OWNED BY public.assigned_tasks.task_id;
+
+
+--
+-- Name: employees; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.employees (
+    employee_id integer NOT NULL,
+    name character varying(100) NOT NULL,
+    email character varying(255) NOT NULL,
+    password character varying(255) NOT NULL,
+    department character varying(100) NOT NULL,
+    manager_id integer,
+    phone_number character varying(20),
+    photo_url text,
+    salary numeric DEFAULT 0 NOT NULL
+);
+
+
+ALTER TABLE public.employees OWNER TO postgres;
+
+--
+-- Name: employees_employee_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.employees_employee_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.employees_employee_id_seq OWNER TO postgres;
+
+--
+-- Name: employees_employee_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.employees_employee_id_seq OWNED BY public.employees.employee_id;
+
+
+--
+-- Name: meetings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.meetings (
+    id integer NOT NULL,
+    meeting_id bigint NOT NULL,
+    title character varying(255) NOT NULL,
+    host_id integer NOT NULL,
+    participant_id integer NOT NULL,
+    start_time timestamp without time zone NOT NULL,
+    end_time timestamp without time zone NOT NULL,
+    date date NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    team_name character varying(255),
+    organizer_id integer
+);
+
+
+ALTER TABLE public.meetings OWNER TO postgres;
+
+--
+-- Name: meetings_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.meetings_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.meetings_id_seq OWNER TO postgres;
+
+--
+-- Name: meetings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.meetings_id_seq OWNED BY public.meetings.id;
+
+
+--
+-- Name: messages; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.messages (
+    id integer NOT NULL,
+    username character varying(100),
+    content text NOT NULL,
+    "timestamp" timestamp with time zone DEFAULT now(),
+    department character varying(50),
+    is_private boolean DEFAULT false,
+    recipient_email character varying(100)
+);
+
+
+ALTER TABLE public.messages OWNER TO postgres;
+
+--
+-- Name: messages_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.messages_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.messages_id_seq OWNER TO postgres;
+
+--
+-- Name: messages_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.messages_id_seq OWNED BY public.messages.id;
+
+CREATE TABLE public.notifications (
+    id integer NOT NULL,
+    employee_id integer NOT NULL,
+    message text NOT NULL,
+    is_read boolean DEFAULT false,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.notifications OWNER TO postgres;
+
+--
+-- TOC entry 232 (class 1259 OID 99190)
+-- Name: notifications_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.notifications_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.notifications_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 4904 (class 0 OID 0)
+-- Dependencies: 232
+-- Name: notifications_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.notifications_id_seq OWNED BY public.notifications.id;
+--
+-- Name: personal_tasks; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.personal_tasks (
+    id integer NOT NULL,
+    employee_id integer NOT NULL,
+    title text NOT NULL,
+    start_time timestamp without time zone NOT NULL,
+    end_time timestamp without time zone NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.personal_tasks OWNER TO postgres;
+
+--
+-- Name: personal_tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.personal_tasks_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.personal_tasks_id_seq OWNER TO postgres;
+
+--
+-- Name: personal_tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.personal_tasks_id_seq OWNED BY public.personal_tasks.id;
+
+
+--
+-- Name: scores; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.scores (
+    employee_id integer NOT NULL,
+    total_score integer DEFAULT 0,
+    last_updated timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.scores OWNER TO postgres;
+
+--
+-- Name: todos; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.todos (
+    todo_id integer NOT NULL,
+    user_id integer NOT NULL,
+    title character varying(255) NOT NULL,
+    description text,
+    is_completed boolean DEFAULT false,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.todos OWNER TO postgres;
+
+--
+-- Name: todos_todo_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.todos_todo_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.todos_todo_id_seq OWNER TO postgres;
+
+--
+-- Name: todos_todo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.todos_todo_id_seq OWNED BY public.todos.todo_id;
+
+
+--
+-- Name: work_sessions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.work_sessions (
+    session_id integer NOT NULL,
+    employee_id integer NOT NULL,
+    minutes integer DEFAULT 0 NOT NULL,
+    created_at timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.work_sessions OWNER TO postgres;
+
+--
+-- Name: work_sessions_session_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.work_sessions_session_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.work_sessions_session_id_seq OWNER TO postgres;
+
+--
+-- Name: work_sessions_session_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.work_sessions_session_id_seq OWNED BY public.work_sessions.session_id;
+
+
+--
+-- Name: assigned_tasks task_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.assigned_tasks ALTER COLUMN task_id SET DEFAULT nextval('public.assigned_tasks_task_id_seq'::regclass);
+
+
+--
+-- Name: employees employee_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.employees ALTER COLUMN employee_id SET DEFAULT nextval('public.employees_employee_id_seq'::regclass);
+
+
+--
+-- Name: meetings id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.meetings ALTER COLUMN id SET DEFAULT nextval('public.meetings_id_seq'::regclass);
+
+
+--
+-- Name: messages id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.messages ALTER COLUMN id SET DEFAULT nextval('public.messages_id_seq'::regclass);
+
+
+--
+-- Name: personal_tasks id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.personal_tasks ALTER COLUMN id SET DEFAULT nextval('public.personal_tasks_id_seq'::regclass);
+
+
+--
+-- Name: todos todo_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.todos ALTER COLUMN todo_id SET DEFAULT nextval('public.todos_todo_id_seq'::regclass);
+
+
+--
+-- Name: work_sessions session_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.work_sessions ALTER COLUMN session_id SET DEFAULT nextval('public.work_sessions_session_id_seq'::regclass);
+
+--
+-- TOC entry 4701 (class 2604 OID 99194)
+-- Name: notifications id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notifications ALTER COLUMN id SET DEFAULT nextval('public.notifications_id_seq'::regclass);
+
+
+--
+-- Data for Name: assigned_tasks; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.assigned_tasks (task_id, employee_id, manager_id, task_name, task_description, deadline, score, created_at, is_completed, completed_at) FROM stdin;
+1	5	2	wdw	qwdqwed	2025-03-08	23	2025-03-24 23:33:33.802566	t	2025-03-29 12:21:29.821544
+3	6	2	iss	db yi kur	2025-04-01	45	2025-03-29 12:23:44.050144	t	2025-03-29 12:25:16.150785
+2	7	2	qqqqqqqq	qqqqqqq	2025-03-30	44	2025-03-24 23:48:30.177088	t	2025-04-01 13:54:52.817142
+4	8	3	asdfg	yap	2025-04-04	50	2025-04-01 12:34:15.728477	t	2025-04-01 14:11:19.804743
+\.
+
+
+--
+-- Data for Name: employees; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.employees (employee_id, name, email, password, department, manager_id, phone_number, photo_url, salary) FROM stdin;
+3	Zeynep Kaya	zeynep@example.com	$2b$10$n6Tpc6FAjRQsnxA6weJoO.RsxmXr51sBJH8U5ft0TZvwbUz/xzHyy	HR-1	1	+905222222222	https://www.profilebakery.com/wp-content/uploads/2023/04/ai-professional-headshot-1.jpg\n	0
+5	Zeynep Deniz	zeynep1@example.com	$2b$10$gEiD8IzjEC6e7g7EPhGvouaIsQP3b4BB57ajahFC6xK6hQYYQl/k.	IT-1	2	+905444444444	https://www.profilebakery.com/wp-content/uploads/2023/04/ai-professional-headshot-5.jpg\n	0
+6	Ali Usta	ali@example.com	$2b$10$tIaHAs5TH7j9yWM7UTJhqeO7LruOYnu6B6RpFpP.MVNEWRxLGIAQC	IT-1	2	+905555555555	https://www.profilebakery.com/wp-content/uploads/2023/04/ai-professional-headshot-7.jpg	0
+4	Ayse Kaya	ayse@example.com	$2b$10$W/ltlWENl94iH9PKN/Ce6uIe2wt471nR/iEfSCW11RczBBlXxEzGe	IT-1	2	+905333333333	https://www.profilebakery.com/wp-content/uploads/2023/04/ai-professional-headshot-4.jpg\n	0
+2	Mehmet Yilmaz	mehmet@example.com	$2b$10$62d2rVIvlBK14HIJAnU4mOdHZEbFGD5xDKu96zNdGGU0gkRrJZTha	IT-1	1	+905111111111	https://www.profilebakery.com/wp-content/uploads/2023/04/ai-professional-headshot-2.jpg\n	0
+7	Damla Can	damla@example.com	$2b$10$1lf0kHYJ0EOKloPRt06wQ.nc1fu0pANfHXG3oIy7Pp9Pj5yZFBLgK	IT-1	2	+905666666666	https://img.freepik.com/premium-photo/face-young-woman-face-white-background-generative-ai_849906-20048.jpg?w=996	0
+1	Ahmet Demir	ahmet@example.com	$2b$10$b.rvhzVwd1EYx0eZJXEL5umRmMHNr7baLBwUIKFaQ0w5HcCANp2Eq	Manager	\N	+9005000000000	https://www.profilebakery.com/wp-content/uploads/2023/04/ai-professional-headshot-2.jpg\n	0
+8	Ayse Yildiz	ayseyildiz@example.com	$2b$10$SCcW/bSC3KUcvX.BSJlx6ul1gWYVbfiEGKSIFy9U7LD8ZYv7FiCl6	HR-1	3	555-789-1234	https://randomuser.me/api/portraits/women/44.jpg	0
+\.
+
+
+--
+-- Data for Name: meetings; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.meetings (id, meeting_id, title, host_id, participant_id, start_time, end_time, date, created_at, team_name, organizer_id) FROM stdin;
+85	84	ewrqa	2	5	2025-05-10 12:00:00	2025-05-10 13:00:00	2025-05-10	2025-05-10 07:01:31.214007	IT-1	2
+86	84	ewrqa	2	6	2025-05-10 12:00:00	2025-05-10 13:00:00	2025-05-10	2025-05-10 07:01:31.220176	IT-1	2
+88	87	qwwe	2	6	2025-05-11 12:00:00	2025-05-11 13:00:00	2025-05-11	2025-05-10 07:09:27.979637	IT-1	2
+89	87	qwwe	2	4	2025-05-11 12:00:00	2025-05-11 13:00:00	2025-05-11	2025-05-10 07:09:27.986278	IT-1	2
+91	90	ghhth	5	6	2025-05-11 12:00:00	2025-05-11 13:00:00	2025-05-11	2025-05-10 07:10:24.552584	IT-1	5
+92	90	ghhth	5	4	2025-05-11 12:00:00	2025-05-11 13:00:00	2025-05-11	2025-05-10 07:10:24.556289	IT-1	5
+94	93	ng	5	2	2025-05-11 12:00:00	2025-05-11 13:00:00	2025-05-11	2025-05-10 07:10:37.220808	IT-1	5
+96	95	hgnbh	2	5	2025-05-11 12:00:00	2025-05-11 13:00:00	2025-05-11	2025-05-10 07:24:54.795661	IT-1	2
+
+
+\.
+
+
+--
+-- Data for Name: messages; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.messages (id, username, content, "timestamp", department, is_private, recipient_email) FROM stdin;
+\.
+
+
+--
+-- Data for Name: personal_tasks; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.personal_tasks (id, employee_id, title, start_time, end_time, created_at) FROM stdin;
+1	5	3e23e	2025-05-10 12:00:00	2025-05-10 13:00:00	2025-05-09 20:33:44.075921
+2	5	wwedwre	2025-05-09 12:00:00	2025-05-09 13:00:00	2025-05-09 20:40:06.733641
+3	2	azaZ	2025-05-10 12:00:00	2025-05-10 13:00:00	2025-05-09 21:11:04.32825
+4	2	qweewq	2025-05-31 12:00:00	2025-05-31 13:00:00	2025-05-10 08:24:12.818137
+\.
+
+
+--
+-- Data for Name: scores; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.scores (employee_id, total_score, last_updated) FROM stdin;
+5	-82	2025-03-29 12:21:29.821544
+6	60	2025-03-29 12:25:16.150785
+7	34	2025-04-01 13:54:52.817142
+8	65	2025-04-01 14:11:19.804743
+\.
+
+
+--
+-- Data for Name: todos; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.todos (todo_id, user_id, title, description, is_completed, created_at) FROM stdin;
+11	5	wawaraw	\N	f	2025-03-25 02:10:05.554615
+\.
+
+
+--
+-- Data for Name: work_sessions; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.work_sessions (session_id, employee_id, minutes, created_at) FROM stdin;
+1	3	0	2025-04-01 10:24:54.016352
+2	5	0	2025-04-01 10:24:54.016352
+3	6	0	2025-04-01 10:24:54.016352
+4	4	0	2025-04-01 10:24:54.016352
+6	7	0	2025-04-01 10:24:54.016352
+7	1	0	2025-04-01 10:24:54.016352
+5	2	3	2025-04-01 10:24:54.016352
+\.
+
+
+--
+-- Name: assigned_tasks_task_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.assigned_tasks_task_id_seq', 2, true);
+
+
+--
+-- Name: employees_employee_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.employees_employee_id_seq', 3, true);
+
+
+--
+-- Name: meetings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.meetings_id_seq', 116, true);
+
+
+--
+-- Name: messages_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.messages_id_seq', 1, false);
+
+
+--
+-- Name: personal_tasks_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.personal_tasks_id_seq', 4, true);
+
+
+--
+-- Name: todos_todo_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.todos_todo_id_seq', 16, true);
+
+
+--
+-- Name: work_sessions_session_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.work_sessions_session_id_seq', 9, true);
+
+--
+-- TOC entry 4912 (class 0 OID 0)
+-- Dependencies: 232
+-- Name: notifications_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.notifications_id_seq', 1, false);
+
+--
+-- Name: assigned_tasks assigned_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.assigned_tasks
+    ADD CONSTRAINT assigned_tasks_pkey PRIMARY KEY (task_id);
+
+
+--
+-- Name: employees employees_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.employees
+    ADD CONSTRAINT employees_email_key UNIQUE (email);
+
+
+--
+-- Name: employees employees_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.employees
+    ADD CONSTRAINT employees_pkey PRIMARY KEY (employee_id);
+
+
+--
+-- Name: meetings meetings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.meetings
+    ADD CONSTRAINT meetings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.messages
+    ADD CONSTRAINT messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: personal_tasks personal_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.personal_tasks
+    ADD CONSTRAINT personal_tasks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: scores scores_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.scores
+    ADD CONSTRAINT scores_pkey PRIMARY KEY (employee_id);
+
+
+--
+-- Name: todos todos_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.todos
+    ADD CONSTRAINT todos_pkey PRIMARY KEY (todo_id);
+
+
+--
+-- Name: work_sessions work_sessions_employee_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.work_sessions
+    ADD CONSTRAINT work_sessions_employee_id_key UNIQUE (employee_id);
+
+
+--
+-- Name: work_sessions work_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.work_sessions
+    ADD CONSTRAINT work_sessions_pkey PRIMARY KEY (session_id);
+
+--
+-- TOC entry 4725 (class 2606 OID 99200)
+-- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4731 (class 2606 OID 99201)
+-- Name: notifications notifications_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notifications
+    ADD CONSTRAINT notifications_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(employee_id);
+
+
+--
+-- Name: assigned_tasks score_update_trigger; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER score_update_trigger AFTER UPDATE OF is_completed ON public.assigned_tasks FOR EACH ROW WHEN ((new.is_completed = true)) EXECUTE FUNCTION public.update_score();
+
+--
+-- Name: assigned_tasks assigned_tasks_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.assigned_tasks
+    ADD CONSTRAINT assigned_tasks_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(employee_id);
+
+
+--
+-- Name: employees employees_manager_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.employees
+    ADD CONSTRAINT employees_manager_id_fkey FOREIGN KEY (manager_id) REFERENCES public.employees(employee_id);
+
+
+--
+-- Name: personal_tasks personal_tasks_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.personal_tasks
+    ADD CONSTRAINT personal_tasks_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(employee_id) ON DELETE CASCADE;
+
+
+--
+-- Name: scores scores_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.scores
+    ADD CONSTRAINT scores_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(employee_id) ON DELETE CASCADE;
+
+
+--
+-- Name: todos todos_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.todos
+    ADD CONSTRAINT todos_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.employees(employee_id) ON DELETE CASCADE;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
