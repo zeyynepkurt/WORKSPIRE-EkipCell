@@ -14,12 +14,15 @@ const employeeRoutes = require('./routes/employees');
 const taskRoutes = require('./routes/tasks');
 const loginRoutes = require('./routes/login');
 const assignTasksRoutes = require('./routes/assignTasks');  // Yeni
+const prioritizerRoute = require("./routes/prioritizer");
 
 
 app.use('/employees', employeeRoutes);
 app.use('/tasks', taskRoutes);
 app.use('/login', loginRoutes);
 app.use('/assign-task', assignTasksRoutes);  // Yeni
+app.use("/prioritizer", prioritizerRoute);
+
 
 // Server Başlatma
 const PORT = process.env.PORT || 5000;
