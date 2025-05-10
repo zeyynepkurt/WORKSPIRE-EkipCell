@@ -8,6 +8,11 @@ const Dashboard = () => {
   const [personalTasks, setPersonalTasks] = useState([]);
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [newPersonalTask, setNewPersonalTask] = useState("");
+  const [showAiBox, setShowAiBox] = useState(false);
+  const [aiTasks, setAiTasks] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
 
   const userId = localStorage.getItem("employeeId");
 
@@ -15,6 +20,20 @@ const Dashboard = () => {
     fetchPersonalTasks();
     fetchAssignedTasks();
   }, []);
+
+  const fetchAiTasks = async () => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const response = await axios.get(`http://localhost:5000/prioritizer/data?employeeId=${userId}`);
+      setAiTasks(response.data);
+    } catch (error) {
+      setAiError("AI görevleri alınamadı.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
 
   const fetchPersonalTasks = async () => {
     try {
@@ -199,10 +218,15 @@ const Dashboard = () => {
             <p className="text-center py-2">{translations[language].noTask}</p>
           )}
         </div>
-      {/* Sağ alt köşedeki AI simgesi */}
+
+
+          {/* Sağ alt köşedeki AI simgesi */}
               <div
                 className="fixed bottom-6 right-6 z-50 cursor-pointer"
-                onClick={() => alert("AI Task Prioritization henüz aktif değil.")}
+                onClick={() => {
+                  setShowAiBox(!showAiBox);
+                  if (!showAiBox) fetchAiTasks();
+                }}
               >
                 <img
                   src={require("../assets/ai-icon.png")}
@@ -211,6 +235,26 @@ const Dashboard = () => {
                 />
               </div>
       </div>
+      
+      {showAiBox && (
+        <div className={`fixed bottom-28 right-6 z-50 w-80 max-h-96 overflow-auto rounded-xl shadow-lg p-4 ${darkMode ? "bg-slate-800 text-white" : "bg-white text-gray-800"}`}>
+          <h3 className="text-lg font-semibold mb-2">📊 AI Önceliklendirme</h3>
+          {aiLoading ? (
+            <p>Yükleniyor...</p>
+          ) : aiError ? (
+            <p className="text-red-500">{aiError}</p>
+          ) : (
+            <ul className="space-y-2">
+              {aiTasks.map((task, index) => (
+                <li key={task.task_id} className="border-b pb-2">
+                  <strong>{index + 1}. {task.task_name}</strong><br />
+                  <span className="text-sm text-blue-500">Skor: {task.predicted_priority.toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          </div>
+        )}
     </div>
   );
 };
