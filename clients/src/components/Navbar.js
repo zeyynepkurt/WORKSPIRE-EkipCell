@@ -18,6 +18,50 @@ const Navbar = ({ darkMode, setDarkMode, language, setLanguage, setMenuOpen }) =
   const currentUser = localStorage.getItem("userEmail");
   const department = localStorage.getItem("userDepartment");
 
+  const [notifications, setNotifications] = useState([]);
+const [showNotifications, setShowNotifications] = useState(false);
+const [unreadNotif, setUnreadNotif] = useState(0);
+const fetchNotifications = async () => {
+  const employeeId = localStorage.getItem("employeeId");
+  const res = await fetch(`http://localhost:5000/api/notifications/${employeeId}`);
+  const data = await res.json();
+
+  setNotifications(data);
+  // count the ones that are NOT read
+  setUnreadNotif(data.filter(n => !n.is_read).length);
+};
+
+useEffect(() => {
+  const handleNotification = (notif) => {
+    const myId = parseInt(localStorage.getItem("employeeId"), 10);
+    if (notif.employee_id === myId) {
+      setNotifications(prev => [notif, ...prev]);
+      setUnreadNotif(prev => prev + 1);          // new unread
+      setShowNotifications(true);                // optional auto-open
+    }
+  };
+
+  socket.on("receiveNotification", handleNotification);
+  return () => socket.off("receiveNotification", handleNotification);
+}, []);
+
+const handleBellClick = async () => {
+  const next = !showNotifications;
+  setShowNotifications(next);
+  if (next) {
+    await fetchNotifications();
+
+    // optional “mark-as-read” in DB
+    await fetch(`http://localhost:5000/api/notifications/mark-read`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeId: localStorage.getItem("employeeId") })
+    });
+
+    setUnreadNotif(0);
+  }
+};
+
   // ✅ Socket üzerinden yeni mesaj geldiğinde sayacı artır
   useEffect(() => {
     const handleMessage = (msg) => {
@@ -46,6 +90,19 @@ const Navbar = ({ darkMode, setDarkMode, language, setLanguage, setMenuOpen }) =
       window.location.reload();
     }, 100);
   };
+
+  useEffect(() => {
+  const handleNotification = (notif) => {
+    const myId = parseInt(localStorage.getItem("employeeId"), 10);
+    if (notif.employee_id === myId) {
+      setNotifications(prev => [notif, ...prev]);
+      setShowNotifications(true);                 // otomatik açmak istersen
+    }
+  };
+
+  socket.on("receiveNotification", handleNotification);
+  return () => socket.off("receiveNotification", handleNotification);
+}, []);
 
   return (
     <nav className={`top-4 left-2 right-2 flex justify-between items-center p-4 ${darkMode ? "bg-blue-800" : "bg-blue-900"} text-white shadow-md rounded-xl relative z-40`}>
@@ -86,7 +143,37 @@ const Navbar = ({ darkMode, setDarkMode, language, setLanguage, setMenuOpen }) =
           </div>
         )}
 
-        <FaBell className="text-2xl cursor-pointer" />
+        <div className="relative">
+      <FaBell
+        className="text-2xl cursor-pointer"
+        onClick={handleBellClick}
+          />
+          {unreadNotif > 0 && (
+            <span className="absolute -top-1 -right-1 inline-block w-2 h-2 rounded-full bg-red-500"></span>
+          )}
+
+          {showNotifications && (
+    <div
+      className={`absolute right-0 top-8 w-64 rounded shadow-lg ${
+        darkMode ? "bg-gray-800 text-white" : "bg-white text-black"
+      } z-50 p-4`}
+    >
+      <h4 className="font-bold mb-2">Bildirimler</h4>
+
+      {notifications.length === 0 ? (
+        <p>Bildirim yok.</p>
+      ) : (
+        <ul className="space-y-1 text-sm">
+          {notifications.map((n) => (
+            <li key={n.id} className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+              {n.message}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )}
+        </div>
 
         {/* Profil ikonu ve dropdown */}
         <div className="relative">
