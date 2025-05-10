@@ -87,44 +87,78 @@ const TaskCalendar = () => {
       months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     }
   };
-  const fetchMeetings = async () => {
-    try {
-      const res = await fetch(`http://localhost:5000/meetings/all`); // 🔁 herkesin toplantısı
-      const data = await res.json();
-  
-      setRawMeetings(data); // 💥 artık tüm katılımcıların toplantılarını içeriyor
-  
-      // UI için benzersiz toplantılar (tek satır)
-      const uniqueMeetingsMap = new Map();
-      data.forEach(m => {
-        if (!uniqueMeetingsMap.has(m.meeting_id)) {
-          uniqueMeetingsMap.set(m.meeting_id, {
-            id: m.meeting_id,
-            date: new Date(m.start_time).toISOString().slice(0, 10),
-            time: `${new Date(m.start_time).toISOString().slice(11, 16)} - ${new Date(m.end_time).toISOString().slice(11, 16)}`,
-            title: m.title,
-            participants: m.title // opsiyonel
-          });
-        }
-      });
-      setMeetings(Array.from(uniqueMeetingsMap.values()));
-  
-      // Kendi görevlerin için filtre (kişisel görünümde kullanılır)
-      const userEmail = localStorage.getItem("userEmail");
-      const personalMeetings = data.filter(m => m.participant_email === userEmail);
-      const personalTasks = personalMeetings.map(m => ({
-        id: m.id,
-        date: new Date(m.start_time).toISOString().slice(0, 10),
-        time: `${new Date(m.start_time).toISOString().slice(11, 16)} - ${new Date(m.end_time).toISOString().slice(11, 16)}`,
-        title: m.title,
-        owner: userEmail
-      }));
-      setTasks(personalTasks);
-  
-    } catch (err) {
-      console.error("Tüm toplantılar alınamadı:", err);
-    }
-  };
+const fetchMeetings = async () => {
+  try {
+    const res = await fetch(`http://localhost:5000/meetings/all`);
+    const data = await res.json();
+
+    setRawMeetings(data); // çakışma için
+
+    // Genel takvim için benzersiz toplantılar
+    const uniqueMeetingsMap = new Map();
+    data.forEach(m => {
+      if (!uniqueMeetingsMap.has(m.meeting_id)) {
+        uniqueMeetingsMap.set(m.meeting_id, {
+          id: m.meeting_id,
+          date: new Date(m.start_time).toISOString().slice(0, 10),
+          time: `${new Date(m.start_time).toISOString().slice(11, 16)} - ${new Date(m.end_time).toISOString().slice(11, 16)}`,
+          title: m.title,
+          participants: m.title
+        });
+      }
+    });
+    setMeetings(Array.from(uniqueMeetingsMap.values()));
+
+    const employeeId = parseInt(localStorage.getItem("employeeId"), 10);
+    const userEmail = localStorage.getItem("userEmail");
+
+    // 1️⃣ Bireysel toplantılar
+   const seen = new Set();
+const personalMeetings = data.filter(m => {
+  const isInvolved = (
+    m.participant_id === employeeId ||
+    m.organizer_id === employeeId ||
+    m.host_id === employeeId
+  );
+
+  if (!isInvolved) return false;
+
+  if (seen.has(m.meeting_id)) return false;
+
+  seen.add(m.meeting_id);
+  return true;
+});
+
+   
+
+
+    // 2️⃣ Kendi görevlerini getir
+    const taskRes = await fetch(`http://localhost:5000/personal-tasks/${employeeId}`);
+    const taskData = await taskRes.json();
+    const personalTasks = taskData.map(t => ({
+      id: t.id,
+      date: t.start_time.split("T")[0],
+      time: `${t.start_time.split("T")[1].slice(0,5)} - ${t.end_time.split("T")[1].slice(0,5)}`,
+      title: t.title,
+      owner: userEmail
+    }));
+
+const personalMeetingTasks = personalMeetings.map(m => ({
+  id: m.id,
+  date: new Date(m.start_time).toISOString().slice(0, 10),
+  time: `${new Date(m.start_time).toISOString().slice(11, 16)} - ${new Date(m.end_time).toISOString().slice(11, 16)}`,
+  title: m.title,
+  owner: userEmail
+}));
+
+setTasks([...personalMeetingTasks, ...personalTasks]);
+
+
+  } catch (err) {
+    console.error("Toplantı veya görev verisi alınamadı:", err);
+  }
+};
+
   
   
   // addMeeting çakışma kontrolüyle güncellenmiş hali
@@ -144,21 +178,20 @@ const TaskCalendar = () => {
     };
  
     
-    if (viewMode === "team") {
+
       fetchMeetings();  // toplantı eklendikten sonra yenile
-    }
+    
     
     if (userEmail) fetchTeamMembers();
   },  [userEmail, viewMode]);
 
-  useEffect(() => {
+    useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
     if (tab === "team" || tab === "personal") {
       setViewMode(tab);
     }
   }, []);
-
   const previousMonth = () => {
     if (selectedMonth === 0) {
       setSelectedMonth(11);
@@ -194,56 +227,51 @@ const TaskCalendar = () => {
     return days;
   };
 
-  const addTask = () => {
-    if (newTaskTitle.trim() === "") {
-      const msg = language === "tr"
-        ? "Görev konusu boş olamaz!"
-        : "Task title cannot be empty!";
-      setErrorMessage(msg);
-      return;
-    }
-  
-    if (startTime >= endTime) {
-      const msg = language === "tr"
-        ? "Başlangıç saati, bitiş saatinden önce olmalı!"
-        : "Start time must be before end time!";
-      setErrorMessage(msg);
-      return;
-    }
-  
-    const sameDayTasks = tasks.filter(t => t.date === newTaskDate && t.owner === userEmail);
-    const newStart = dayjs(`${newTaskDate}T${startTime}`);
-    const newEnd = dayjs(`${newTaskDate}T${endTime}`);
+  const addTask = async () => {
+  if (newTaskTitle.trim() === "") {
+    const msg = language === "tr"
+      ? "Görev konusu boş olamaz!"
+      : "Task title cannot be empty!";
+    setErrorMessage(msg);
+    return;
+  }
 
-    console.log("✅ NewStart/End", newStart.format(), newEnd.format());
+  if (startTime >= endTime) {
+    const msg = language === "tr"
+      ? "Başlangıç saati, bitiş saatinden önce olmalı!"
+      : "Start time must be before end time!";
+    setErrorMessage(msg);
+    return;
+  }
 
-  
-    const hasConflict = sameDayTasks.some(t => {
-      const [tStartStr, tEndStr] = t.time.split(" - ");
-      const tStart = dayjs(`${t.date}T${tStartStr}`);
-      const tEnd = dayjs(`${t.date}T${tEndStr}`);
-      return newStart.isBefore(tEnd) && newEnd.isAfter(tStart);
+  const employeeId = localStorage.getItem("employeeId");
+  if (!employeeId) return;
+
+  try {
+    const res = await fetch("http://localhost:5000/personal-tasks/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        employeeId,
+        title: newTaskTitle,
+        startTime: `${newTaskDate}T${startTime}`,
+        endTime: `${newTaskDate}T${endTime}`
+      })
     });
-  
-    if (hasConflict) {
-      const msg = language === "tr"
-        ? "Bu saat aralığında zaten bir görev var!"
-        : "There's already a task in this time range!";
-      setErrorMessage(msg);
-      return;
-    }
-  
-    const newTask = {
-      id: tasks.length + 1,
-      date: newTaskDate,
-      time: `${startTime} - ${endTime}`,
-      title: newTaskTitle,
-      owner: userEmail
-    };
-    setTasks([...tasks, newTask]);
+
+    if (!res.ok) throw new Error("Görev eklenemedi");
+
+    // ✅ Yeniden görevleri ve toplantıları çek
+    await fetchMeetings();
+
     setNewTaskTitle("");
     setErrorMessage("");
-  };
+  } catch (err) {
+    console.error("Görev ekleme hatası:", err);
+    setErrorMessage(language === "tr" ? "Görev eklenemedi" : "Task could not be added");
+  }
+};
+
   
 const addMeeting = async () => {
   // 1️⃣ Alanları kontrol et
@@ -275,21 +303,21 @@ const addMeeting = async () => {
   // 4️⃣ Çakışma kontrolü (frontend’de ön gösterim için)
   const newStart = dayjs(`${newTaskDate}T${startTime}`);
   const newEnd   = dayjs(`${newTaskDate}T${endTime}`);
-  const conflicts = rawMeetings.filter(m => {
-    const mStart = dayjs(m.start_time);
-    const mEnd   = dayjs(m.end_time);
-    return mStart.isSame(newStart, "day")
-        && newStart.isBefore(mEnd)
-        && newEnd.isAfter(mStart)
-        && participantIds.includes(m.participant_id);
-  });
-  if (conflicts.length) {
-    setErrorMessage(language === 'tr'
-      ? "Katılımcılardan biri o saatte başka bir toplantıda."
-      : "One of the participants already has a meeting at this time."
-    );
-    return;
-  }
+  // const conflicts = rawMeetings.filter(m => {
+  //   const mStart = dayjs(m.start_time);
+  //   const mEnd   = dayjs(m.end_time);
+  //   return mStart.isSame(newStart, "day")
+  //       && newStart.isBefore(mEnd)
+  //       && newEnd.isAfter(mStart)
+  //       && participantIds.includes(m.participant_id);
+  // });
+  // if (conflicts.length) {
+  //   setErrorMessage(language === 'tr'
+  //     ? "Katılımcılardan biri o saatte başka bir toplantıda."
+  //     : "One of the participants already has a meeting at this time."
+  //   );
+  //   return;
+  // }
 
   // 5️⃣ Backend’e POST
   try {
@@ -303,6 +331,7 @@ const addMeeting = async () => {
         end_time:        `${newTaskDate}T${endTime}`,
         team_name:       userDepartment,
         organizer_id:    hostId,
+        host_id: hostId, 
         participant_ids: participantIds.filter(id => id !== hostId)
       })
     });
@@ -342,6 +371,8 @@ const addMeeting = async () => {
       : "Couldn’t save the meeting. Please try again."
     );
   }
+  window.location.reload(); 
+
 };
 
   
@@ -447,5 +478,4 @@ const addMeeting = async () => {
     </div>
   );
 };
-
 export default TaskCalendar;
