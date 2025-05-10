@@ -21,6 +21,7 @@ services:
     restart: always
     depends_on:
       - db
+      - ml
     environment:
       DATABASE_URL: postgres://postgres:12345@db:5432/workspire
       DB_HOST: db
@@ -44,6 +45,19 @@ services:
       - ./clients:/app
     working_dir: /app
     command: ["npm", "start"]
+
+  ml:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./ml:/app
+    working_dir: /app
+    command: ["python", "app.py"]
+
 
 volumes:
   pgdata:
