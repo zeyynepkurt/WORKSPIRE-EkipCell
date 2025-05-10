@@ -1,4 +1,4 @@
-// backend/app.js
+// tasks.js
 
 const express = require('express');
 const app = express();
@@ -12,9 +12,12 @@ app.use(express.json());
 // Routes
 const employeeRoutes = require('./routes/employees');
 const taskRoutes = require('./routes/tasks');
+const prioritizerRoutes = require('./routes/prioritizer'); // ✅
 
 app.use('/employees', employeeRoutes);
 app.use('/tasks', taskRoutes);
+app.use('/prioritizer', prioritizerRoutes); // ✅
+
 
 // Server Başlatma
 const PORT = process.env.PORT || 5000;
