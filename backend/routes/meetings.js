@@ -5,19 +5,17 @@ const db = require('../db/db');
 
 // Toplantı oluşturma endpoint'i
 router.post('/', async (req, res) => {
-  const { title, host_id, participant_ids, start_time, end_time, date } = req.body;
+  const { title, host_id, participant_ids, start_time, end_time, date, team_name, organizer_id } = req.body;
+console.log("📥 Gelen POST verisi:", req.body);
 
   if (!title || !host_id || !participant_ids || !start_time || !end_time || !date) {
     return res.status(400).json({ error: 'Eksik bilgi gönderildi' });
   }
 
-  const meeting_id = Date.now(); // basit bir unique ID
-
-  // Hem host hem katılımcılar birlikte kontrol edilecek
+  const meeting_id = Date.now();
   const allParticipantIds = [host_id, ...participant_ids];
 
   try {
-    // Çakışma kontrolü
     const conflictQuery = `
       SELECT * FROM meetings
       WHERE participant_id = ANY($1)
@@ -30,12 +28,13 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Katılımcılardan biri o saatte başka bir toplantıda.' });
     }
 
-    // Tüm kullanıcılar için (host + diğerleri) kayıt ekleniyor
+    // Her kullanıcı için toplantıyı kaydet
     for (const participant_id of allParticipantIds) {
       await db.query(
-        `INSERT INTO meetings (meeting_id, title, host_id, participant_id, start_time, end_time, date)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [meeting_id, title, host_id, participant_id, start_time, end_time, date]
+        `INSERT INTO meetings (
+          meeting_id, title, host_id, participant_id, start_time, end_time, date, team_name, organizer_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [meeting_id, title, host_id, participant_id, start_time, end_time, date, team_name, organizer_id]
       );
     }
 
@@ -46,6 +45,7 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: 'Sunucu hatası' });
   }
 });
+
 
 
 router.get('/all', async (req, res) => {
