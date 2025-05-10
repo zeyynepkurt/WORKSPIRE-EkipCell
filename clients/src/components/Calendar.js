@@ -87,28 +87,6 @@ const TaskCalendar = () => {
       months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     }
   };
-
-  const fetchTasks = async () => {
-    const employeeId = localStorage.getItem("employeeId");
-    if (!employeeId) return;
-  
-    try {
-      const res = await fetch(`http://localhost:5000/personal-tasks/${employeeId}`);
-      const data = await res.json();
-      const formatted = data.map(t => ({
-        id: t.id,
-        date: t.start_time.split("T")[0],
-        time: `${t.start_time.split("T")[1].slice(0,5)} - ${t.end_time.split("T")[1].slice(0,5)}`,
-        title: t.title,
-        owner: userEmail
-      }));
-      setTasks(formatted);
-    } catch (err) {
-      console.error("Görevler alınamadı:", err);
-    }
-  };
-
-  
   const fetchMeetings = async () => {
     try {
       const res = await fetch(`http://localhost:5000/meetings/all`); // 🔁 herkesin toplantısı
@@ -173,10 +151,6 @@ const TaskCalendar = () => {
     if (userEmail) fetchTeamMembers();
   },  [userEmail, viewMode]);
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
   const previousMonth = () => {
     if (selectedMonth === 0) {
       setSelectedMonth(11);
@@ -212,49 +186,55 @@ const TaskCalendar = () => {
     return days;
   };
 
-  const addTask = async () => {
+  const addTask = () => {
     if (newTaskTitle.trim() === "") {
-      setErrorMessage(language === "tr"
+      const msg = language === "tr"
         ? "Görev konusu boş olamaz!"
-        : "Task title cannot be empty!");
+        : "Task title cannot be empty!";
+      setErrorMessage(msg);
       return;
     }
   
     if (startTime >= endTime) {
-      setErrorMessage(language === "tr"
+      const msg = language === "tr"
         ? "Başlangıç saati, bitiş saatinden önce olmalı!"
-        : "Start time must be before end time!");
+        : "Start time must be before end time!";
+      setErrorMessage(msg);
       return;
     }
   
-    const employeeId = localStorage.getItem("employeeId");
+    const sameDayTasks = tasks.filter(t => t.date === newTaskDate && t.owner === userEmail);
+    const newStart = dayjs(`${newTaskDate}T${startTime}`);
+    const newEnd = dayjs(`${newTaskDate}T${endTime}`);
+
+    console.log("✅ NewStart/End", newStart.format(), newEnd.format());
+
   
-    if (!employeeId) {
-      setErrorMessage("Giriş bilgisi eksik!");
+    const hasConflict = sameDayTasks.some(t => {
+      const [tStartStr, tEndStr] = t.time.split(" - ");
+      const tStart = dayjs(`${t.date}T${tStartStr}`);
+      const tEnd = dayjs(`${t.date}T${tEndStr}`);
+      return newStart.isBefore(tEnd) && newEnd.isAfter(tStart);
+    });
+  
+    if (hasConflict) {
+      const msg = language === "tr"
+        ? "Bu saat aralığında zaten bir görev var!"
+        : "There's already a task in this time range!";
+      setErrorMessage(msg);
       return;
     }
   
-    try {
-      const response = await fetch("http://localhost:5000/personal-tasks/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          employeeId,
-          title: newTaskTitle,
-          startTime: `${newTaskDate}T${startTime}`,
-          endTime: `${newTaskDate}T${endTime}`
-        })
-      });
-  
-      if (!response.ok) throw new Error("Görev eklenemedi");
-  
-      setNewTaskTitle("");
-      setErrorMessage("");
-      fetchTasks(); // Görevleri yeniden çek
-    } catch (err) {
-      console.error("Görev ekleme hatası:", err);
-      setErrorMessage(language === "tr" ? "Görev eklenirken hata oluştu" : "Failed to add task");
-    }
+    const newTask = {
+      id: tasks.length + 1,
+      date: newTaskDate,
+      time: `${startTime} - ${endTime}`,
+      title: newTaskTitle,
+      owner: userEmail
+    };
+    setTasks([...tasks, newTask]);
+    setNewTaskTitle("");
+    setErrorMessage("");
   };
   
 const addMeeting = async () => {
