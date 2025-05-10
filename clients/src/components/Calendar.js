@@ -7,21 +7,12 @@ import weekday from "dayjs/plugin/weekday";
 import isBetween from "dayjs/plugin/isBetween";
 import utc from "dayjs/plugin/utc";
 
-
-
-
-
-
 dayjs.extend(updateLocale);
 dayjs.extend(weekday);
 dayjs.extend(utc);
-
-
-
 dayjs.updateLocale('en', {
   weekStart: 1  // Pazartesi
 });
-
 
 const TaskCalendar = () => {
   const { darkMode, language } = useOutletContext();
@@ -130,8 +121,6 @@ const personalMeetings = data.filter(m => {
 });
 
    
-
-
     // 2️⃣ Kendi görevlerini getir
     const taskRes = await fetch(`http://localhost:5000/personal-tasks/${employeeId}`);
     const taskData = await taskRes.json();
@@ -153,19 +142,15 @@ const personalMeetingTasks = personalMeetings.map(m => ({
 
 setTasks([...personalMeetingTasks, ...personalTasks]);
 
-
   } catch (err) {
     console.error("Toplantı veya görev verisi alınamadı:", err);
   }
 };
 
-  
-  
+
   // addMeeting çakışma kontrolüyle güncellenmiş hali
   dayjs.extend(isBetween); // dayjs isBetween plugini lazımsa
   
-  
-
   useEffect(() => {
     const fetchTeamMembers = async () => {
       try {
@@ -177,8 +162,6 @@ setTasks([...personalMeetingTasks, ...personalTasks]);
       }
     };
  
-    
-
       fetchMeetings();  // toplantı eklendikten sonra yenile
     
     
@@ -473,6 +456,17 @@ const addMeeting = async () => {
             <FaPlus className="mr-2" />
             {viewMode === "personal" ? translations[language].addTask : translations[language].addMeeting}
           </button>
+              {/* Sağ alt köşedeki AI simgesi */}
+              <div
+                className="fixed bottom-6 right-6 z-50 cursor-pointer"
+                onClick={() => alert("AI Smart Meeting Suggestion henüz aktif değil.")}
+              >
+                <img
+                  src={require("../assets/smartMeeting.png")}
+                  alt="AI Prioritize"
+                  className="w-20 h-20 hover:scale-105 transition-transform duration-200"
+                />
+              </div>
         </div>
       </div>
     </div>
