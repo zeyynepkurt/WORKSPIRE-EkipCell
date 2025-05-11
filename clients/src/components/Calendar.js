@@ -39,6 +39,10 @@ const TaskCalendar = () => {
   const daysInMonth = endOfMonth.date(); // Ayın toplam günü
   const calendarDays = [];
   const userDepartment = localStorage.getItem("userDepartment");
+  const [selectedMeeting, setSelectedMeeting] = useState(null);
+  const [popoverPos, setPopoverPos] = useState({ x: 0, y: 0 });
+
+
   for (let i = 0; i < startDay; i++) calendarDays.push(null); // Ay öncesi boş hücreler
   for (let i = 1; i <= daysInMonth; i++) calendarDays.push(dayjs(startOfMonth).date(i).format("YYYY-MM-DD"));
 
@@ -78,6 +82,7 @@ const TaskCalendar = () => {
       months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     }
   };
+
 const fetchMeetings = async () => {
   try {
     const res = await fetch(`http://localhost:5000/meetings/all`);
@@ -94,18 +99,34 @@ const fetchMeetings = async () => {
           date: new Date(m.start_time).toISOString().slice(0, 10),
           time: `${new Date(m.start_time).toISOString().slice(11, 16)} - ${new Date(m.end_time).toISOString().slice(11, 16)}`,
           title: m.title,
-          participants: m.title
+          participants: data
+        .filter(x => x.meeting_id === m.meeting_id)
+        .map(x => ({ name: x.participant_name || `Kişi ${x.participant_id}` }))
         });
       }
     });
     setMeetings(Array.from(uniqueMeetingsMap.values()));
 
+    const groupedMeetings = meetings.reduce((acc, meeting) => {
+  const id = meeting.meeting_id;
+  if (!acc[id]) {
+    acc[id] = {
+      ...meeting,
+      participants: [meeting.participant_name],
+    };
+  } else {
+    acc[id].participants.push(meeting.participant_name);
+  }
+  return acc;
+}, {});
+
+   const uniqueMeetings = Object.values(groupedMeetings);
     const employeeId = parseInt(localStorage.getItem("employeeId"), 10);
     const userEmail = localStorage.getItem("userEmail");
 
     // 1️⃣ Bireysel toplantılar
    const seen = new Set();
-const personalMeetings = data.filter(m => {
+  const personalMeetings = data.filter(m => {
   const isInvolved = (
     m.participant_id === employeeId ||
     m.organizer_id === employeeId ||
@@ -400,10 +421,18 @@ const addMeeting = async () => {
                       : meetings.filter(m => m.date === date))]
                       .sort((a, b) => a.time.localeCompare(b.time))
                       .map((item, idx) => (
-                        <li key={idx} className="bg-gray-100 p-1 mt-1 rounded">
+                        <li
+                          key={idx}
+                          className="bg-gray-100 p-1 mt-1 rounded cursor-pointer hover:bg-gray-200"
+                          onClick={(e) => {
+                            const rect = e.target.getBoundingClientRect();
+                            setPopoverPos({ x: rect.left + window.scrollX, y: rect.bottom + window.scrollY });
+                            setSelectedMeeting(item);
+                          }}
+                        >
                           {item.time} - {item.title}
                         </li>
-                    ))}
+                      ))}
                   </ul>
 
                 </>
@@ -440,6 +469,39 @@ const addMeeting = async () => {
                   {m.name}
                 </label>
               ))}
+            </div>
+          )}
+
+          {selectedMeeting && (
+            <div
+              style={{
+                position: "absolute",
+                top: popoverPos.y + 5,
+                left: popoverPos.x,
+                background: "white",
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                padding: "10px",
+                zIndex: 1000,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                minWidth: "200px"
+              }}
+              onClick={() => setSelectedMeeting(null)}
+            >
+              <h4 className="font-bold mb-1 text-sm">{selectedMeeting.title}</h4>
+              <p className="text-xs text-gray-500 mb-1">
+                {selectedMeeting.time} ({selectedMeeting.start_time?.slice(11, 16)} - {selectedMeeting.end_time?.slice(11, 16)})
+              </p>
+              <p className="text-sm font-medium">Katılımcılar:</p>
+              <ul className="list-disc pl-5 text-sm">
+                {Array.isArray(selectedMeeting.participants) && selectedMeeting.participants.length > 0 ? (
+                  selectedMeeting.participants.map((p, i) => (
+                    <li key={i}>{p.name || p}</li>
+                  ))
+                ) : (
+                  <li className="italic text-gray-400">Bilinmiyor</li>
+                )}
+              </ul>
             </div>
           )}
         
