@@ -18,16 +18,14 @@ const Navbar = ({ darkMode, setDarkMode, language, setLanguage, setMenuOpen }) =
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
 
-  
+  const employeeId = localStorage.getItem("employeeId");
   const navigate = useNavigate();
   const currentUser = localStorage.getItem("userEmail");
   const department = localStorage.getItem("userDepartment");
-  const employeeId = localStorage.getItem("employeeId");
 
   const [notifications, setNotifications] = useState([]);
 const [showNotifications, setShowNotifications] = useState(false);
 const [unreadNotif, setUnreadNotif] = useState(0);
-
 const fetchNotifications = async () => {
   const res = await fetch(`http://localhost:5000/api/notifications/${employeeId}`);
   const data = await res.json();
