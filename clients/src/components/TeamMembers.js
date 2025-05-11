@@ -86,7 +86,7 @@ const TeamMembers = () => {
       {/* Yönetici Kartı */}
       {manager && (
         <div
-          onClick={() => navigate(`/team-members/${manager.employee_id}`)}
+          onClick={() => navigate(`/employee/${manager.employee_id}`)}
           className={`w-full max-w-md mx-auto mb-8 p-6 rounded-lg shadow-md cursor-pointer transition ${
             darkMode ? "bg-blue-900 hover:bg-blue-800" : "bg-yellow-100 hover:bg-yellow-200"
           }`}
@@ -106,7 +106,7 @@ const TeamMembers = () => {
         {otherEmployees.map((employee) => (
           <div
             key={employee.employee_id}
-            onClick={() => navigate(`/team-members/${employee.employee_id}`)}
+            onClick={() => navigate(`/employee/${employee.employee_id}`)}
             className={`p-4 rounded-lg shadow-md flex flex-col items-center cursor-pointer transition ${
               darkMode ? "bg-blue-900 hover:bg-blue-800" : "bg-yellow-100 hover:bg-yellow-200"
             }`}
