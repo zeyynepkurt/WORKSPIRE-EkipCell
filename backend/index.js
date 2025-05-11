@@ -31,6 +31,8 @@ app.use("/api/messages", messagesRoutes);
 app.use('/meetings', meetingsRoute);
 app.use('/personal-tasks', personalTasksRoute);
 app.use("/prioritizer", prioritizerRoute);
+app.use('/api/employees', employeeRoutes);
+
 
 // ======================= SOCKET.IO ============================
 io.on("connection", (socket) => {
