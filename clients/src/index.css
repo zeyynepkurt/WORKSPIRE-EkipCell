@@ -19,3 +19,37 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* react-calendar görünümünü genişlet */
+.react-calendar {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* MANUEL DARK MODE OVERRIDE */
+.react-calendar.dark {
+  background-color: #1e293b;
+  color: #f1f5f9;
+  border-radius: 0.75rem;
+}
+
+.react-calendar.dark .react-calendar__tile {
+  background: none;
+  color: #f1f5f9;
+}
+
+.react-calendar.dark .react-calendar__tile--now {
+  background-color: #334155;
+  color: #facc15;
+  border-radius: 0.5rem;
+}
+
+.react-calendar.dark .react-calendar__tile--active {
+  background-color: #2563eb;
+  color: white;
+  border-radius: 0.5rem;
+}
+
+.react-calendar.dark .react-calendar__month-view__weekdays {
+  color: #cbd5e1;
+}

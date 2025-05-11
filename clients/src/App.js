@@ -11,6 +11,8 @@ import ChatPanel from "./components/ChatBox/ChatPanel";
 import Scoreboard from "./components/Scoreboard";
 import MemoryGame from "./components/MemoryGame";
 import PrioritizerPage from "./pages/PrioritizerPage";
+import EmployeeProfileWrapper from './components/EmployeeProfile/EmployeeProfileWrapper';
+
 
 function App() {
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
@@ -34,6 +36,7 @@ function App() {
             <Route path="/game" element={<MemoryGame />} />
             <Route path="/manager" element={managerId === "1" ? <ManagerHome /> : <Navigate to="/home" />} />
             <Route path="/prioritizer" element={<PrioritizerPage />} />
+            <Route path="/employee/:id" element={<EmployeeProfileWrapper />} />
           </Route>
         )}
 
