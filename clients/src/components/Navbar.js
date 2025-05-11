@@ -3,17 +3,22 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import socket from "../socket";
 import ChatBox from "./ChatBox";
+import axios from "axios";
+
 
 const Navbar = ({ darkMode, setDarkMode, language, setLanguage, setMenuOpen }) => {
   const translations = {
-    tr: { search: "Ara...", logout: "Çıkış Yap" },
-    en: { search: "Search...", logout: "Log Out" }
+    tr: { search: " Kişi Ara...", logout: "Çıkış Yap", profile: "Profil" },
+    en: { search: "Search for Person...", logout: "Log Out", profile: "Profile" },
   };
 
   const [chatOpen, setChatOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
 
+  
   const navigate = useNavigate();
   const currentUser = localStorage.getItem("userEmail");
   const department = localStorage.getItem("userDepartment");
@@ -81,6 +86,27 @@ const handleBellClick = async () => {
     return () => socket.off("receiveMessage", handleMessage);
   }, [currentUser, department]);
 
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setSearchResults([]);
+      return;
+    }
+
+    axios.get("/api/employees")
+      .then(res => {
+        const filtered = res.data
+          .filter(emp =>
+            emp.name?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+            emp.employee_id // ❗ sadece geçerli ID'li olanları al
+          );
+        setSearchResults(filtered);
+      })
+      .catch(err => {
+        console.error("Arama hatası:", err);
+        setSearchResults([]); // güvenli fallback
+      });
+  }, [searchQuery]);
+
   // Çıkış yapma fonksiyonu
   const handleLogout = () => {
     localStorage.clear();
@@ -89,6 +115,10 @@ const handleBellClick = async () => {
     setTimeout(() => {
       window.location.reload();
     }, 100);
+  };
+
+  const openProfile = () => {
+    navigate(`/employee/${employeeId}`);
   };
 
   useEffect(() => {
@@ -114,8 +144,27 @@ const handleBellClick = async () => {
           <input
             type="text"
             placeholder={translations[language].search}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-4 py-2 rounded-full text-black focus:outline-none shadow-md"
           />
+          {searchResults.length > 0 && (
+            <div className="absolute top-12 left-0 w-full bg-white text-black rounded shadow z-50 max-h-60 overflow-auto">
+              {searchResults.map(emp => (
+                <div
+                  key={emp.employee_id}
+                  className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                  onClick={() => {
+                    navigate(`/employee/${emp.employee_id}`);
+                    setSearchQuery("");
+                    setSearchResults([]);
+                  }}
+                >
+                  {emp.name}
+                </div>
+              ))}
+            </div>
+          )}
           <FaSearch className="absolute right-3 top-3 text-gray-600" />
         </div>
       </div>
@@ -183,6 +232,9 @@ const handleBellClick = async () => {
           />
           {profileOpen && (
             <div className={`absolute right-0 mt-2 w-40 rounded-md shadow-lg ${darkMode ? "bg-gray-800 text-white" : "bg-white text-black"} z-50`}>
+              <button onClick={openProfile} className={`w-full text-left px-4 py-2 transition hover:${darkMode ? "bg-gray-700" : "bg-gray-100"}`}>
+                {translations[language].profile}
+              </button> 
               <button
                 onClick={handleLogout}
                 className={`w-full text-left px-4 py-2 transition hover:${darkMode ? "bg-gray-700" : "bg-gray-100"}`}
