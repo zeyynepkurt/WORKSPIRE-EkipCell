@@ -115,7 +115,5 @@ router.get('/:user_id', async (req, res) => {
 });
 
 // io'yu dışarıdan alabilmek için export ediyoruz
-module.exports = {
-  router,
-  setSocketIO
-};
+module.exports = router;
+  

@@ -54,6 +54,8 @@ router.get('/:id/calendar', async (req, res) => {
   }
 });
 
+
+
 router.get('/manager/:managerId', async (req, res) => {
     const { managerId } = req.params;
     try {
@@ -72,6 +74,28 @@ router.get('/manager/:managerId', async (req, res) => {
     } catch (error) {
         console.error("Employees route error:", error);
         res.status(500).json({ message: 'Sunucu hatası.' });
+    }
+});
+
+router.post('/assign-task', async (req, res) => {
+    const { employee_id, manager_id, task_name, task_description, deadline, score } = req.body;
+
+    if (!employee_id || !manager_id || !task_name) {
+        return res.status(400).json({ message: 'Eksik bilgi var. Görev adı, çalışan ID ve yönetici ID gerekli.' });
+    }
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO assigned_tasks (employee_id, manager_id, task_name, task_description, deadline, score)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING *`,
+            [employee_id, manager_id, task_name, task_description, deadline, score]
+        );
+
+        res.status(201).json({ message: 'Görev başarıyla atandı.', task: result.rows[0] });
+    } catch (error) {
+        console.error("Görev ekleme hatası:", error);
+        res.status(500).json({ message: 'Sunucu hatası. Görev atanamadı.' });
     }
 });
 
@@ -120,5 +144,6 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: "Sunucu hatası." });
   }
 });
+
 
 module.exports = router;
