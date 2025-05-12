@@ -75,44 +75,69 @@ const MemoryGame = () => {
     }
   };
 
-  return (
-    <div className={`${darkMode ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-900"} h-screen p-6 relative flex`}>
-        <div className="flex flex-col items-center mt-6">
-          <h1 className="text-3xl font-bold mb-8">{language === "tr" ? "Hafıza Oyunu" : "Memory Game"}</h1>
-          <button className="bg-blue-500 text-white px-4 py-2 rounded mb-6" onClick={shuffleCards}>
-            {language === "tr" ? "Yeniden Başlat" : "Restart Game"}
-          </button>
-          <div className="grid grid-cols-4 gap-4">
-            {cards.map(card => (
-              <motion.div
-                key={card.id}
-                onClick={() => handleFlip(card)}
-                className="w-24 h-32 flex items-center justify-center bg-yellow-300 border border-gray-500 rounded-lg cursor-pointer shadow-lg"
-                animate={{ rotateY: flippedCards.includes(card) || matchedCards.includes(card.src) ? 0 : 180 }}
-                transition={{ duration: 0.5 }}
-              >
-                {(flippedCards.includes(card) || matchedCards.includes(card.src)) ? <span className="text-3xl">{card.src}</span> : null}
-              </motion.div>
-            ))}
-          </div>
-          <p className="mt-6 text-xl">{language === "tr" ? "Hamle Sayısı:" : "Turns:"} {turns}</p>
+ return (
+  <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-900'} min-h-screen flex items-center justify-center`} >
+    <div className="flex flex-col items-center">
+      {/* Başlık */}
+      <h1 className="text-3xl font-bold mb-8">
+        {language === 'tr' ? 'Hafıza Oyunu' : 'Memory Game'}
+      </h1>
 
-          {gameWon && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="bg-white p-8 rounded-xl shadow-xl text-center">
-                <h2 className="text-3xl font-bold mb-4">{language === "tr" ? "Kazandınız!" : "You Win!"}</h2>
-                <button
-                  onClick={shuffleCards}
-                  className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
-                >
-                  {language === "tr" ? "Yeniden Başlat" : "Restart"}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Yeniden başlat */}
+      <button
+        className="bg-blue-500 text-white px-4 py-2 rounded mb-6"
+        onClick={shuffleCards}
+      >
+        {language === 'tr' ? 'Yeniden Başlat' : 'Restart Game'}
+      </button>
+
+      {/* Kartlar */}
+      <div className="grid grid-cols-4 gap-4">
+        {cards.map((card) => (
+          <motion.div
+            key={card.id}
+            onClick={() => handleFlip(card)}
+            className="w-24 h-32 flex items-center justify-center bg-yellow-300 border border-gray-500 rounded-lg cursor-pointer shadow-lg"
+            animate={{
+              rotateY:
+                flippedCards.includes(card) || matchedCards.includes(card.src)
+                  ? 0
+                  : 180,
+            }}
+            transition={{ duration: 0.5 }}
+          >
+            {(flippedCards.includes(card) ||
+              matchedCards.includes(card.src)) && (
+              <span className="text-3xl">{card.src}</span>
+            )}
+          </motion.div>
+        ))}
       </div>
-  );
+
+      {/* Hamle sayısı */}
+      <p className="mt-6 text-xl">
+        {language === 'tr' ? 'Hamle Sayısı:' : 'Turns:'} {turns}
+      </p>
+
+      {/* Kazandı pop-up'ı */}
+      {gameWon && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-xl shadow-xl text-center">
+            <h2 className="text-3xl font-bold mb-4">
+              {language === 'tr' ? 'Kazandınız!' : 'You Win!'}
+            </h2>
+            <button
+              onClick={shuffleCards}
+              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+            >
+              {language === 'tr' ? 'Yeniden Başlat' : 'Restart'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+);
 };
 
 export default MemoryGame;
