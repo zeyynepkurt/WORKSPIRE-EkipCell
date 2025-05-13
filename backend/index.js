@@ -12,6 +12,7 @@ const messagesRoutes = require("./routes/messages");
 const meetingsRoute = require('./routes/meetings');
 const personalTasksRoute = require('./routes/personalTasks');
 const prioritizerRoute = require("./routes/prioritizer");
+const meetingSuggestions = require("./routes/meetingSuggestions");
 
 
 const app = express();
@@ -32,6 +33,7 @@ app.use('/meetings', meetingsRoute);
 app.use('/personal-tasks', personalTasksRoute);
 app.use("/prioritizer", prioritizerRoute);
 app.use('/api/employees', employeeRoutes);
+app.use("/api/meeting-suggestions", meetingSuggestions);
 
 // ======================= SOCKET.IO ============================
 io.on("connection", (socket) => {
