@@ -5,8 +5,9 @@ import { FaBars, FaBell, FaEnvelope, FaUserCircle, FaSearch, FaTrash, FaTimes, F
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar"; // Tıpkı Dashboard gibi
 import axios from "axios";
-
+import { useOutletContext } from "react-router-dom";
 function ManagerHome() {
+  const { darkMode, language } = useOutletContext();
   // To-Do list (sol kısım)
   const [personalTasks, setPersonalTasks] = useState([]);
   const [newPersonalTask, setNewPersonalTask] = useState("");
@@ -17,9 +18,8 @@ function ManagerHome() {
   const [newTask, setNewTask] = useState({ task_name: "", task_description: "", deadline: "", score: "" });
 
   // Ortak Dashboard state’leri
-  const [darkMode, setDarkMode] = useState(false);
+  
   const [menuOpen, setMenuOpen] = useState(false);
-  const [language, setLanguage] = useState("tr");
 
   // Manager id
   const managerId = localStorage.getItem("employeeId") || "";
@@ -180,31 +180,36 @@ const handleInputChange = (e) => {
 
             {/* Çalışan Seçimi */}
             <select 
-                onChange={e => setSelectedEmployeeId(e.target.value)} 
-                value={selectedEmployeeId || ""} 
-                className="p-2 border rounded mb-2 w-full"
+              onChange={e => setSelectedEmployeeId(e.target.value)} 
+              value={selectedEmployeeId || ""} 
+              className={`p-2 border rounded mb-2 w-full 
+                          ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}`}
             >
-                <option value="">Çalışan Seç</option>
-                {employees.length > 0 ? (
-                    employees.map(employee => (
-                        <option key={employee.employee_id} value={employee.employee_id}>
-                            {employee.name}
-                        </option>
-                    ))
-                ) : (
-                    <option disabled>Çalışan bulunamadı</option>
-                )}
+              <option value="">Çalışan Seç</option>
+              {employees.length > 0 ? (
+                employees.map(employee => (
+                  <option 
+                    key={employee.employee_id} 
+                    value={employee.employee_id}
+                    className={darkMode ? "bg-gray-800 text-white" : ""}
+                  >
+                    {employee.name}
+                  </option>
+                ))
+              ) : (
+                <option disabled>Çalışan bulunamadı</option>
+              )}
             </select>
 
 
             {/* Görev Adı */}
             <input
-              name="task_name"
-              placeholder="Görev Adı"
-              value={newTask.task_name}
-              onChange={handleInputChange}
-              className="p-2 border rounded mb-2 w-full"
-            />
+                name="task_name"
+                placeholder="Görev Adı"
+                value={newTask.task_name}
+                onChange={handleInputChange}
+                className={`p-2 border rounded mb-2 w-full ${darkMode ? "bg-gray-800 text-white placeholder-gray-400" : "bg-white text-black"}`}
+              />
 
             {/* Görev Açıklaması */}
             <textarea
@@ -212,9 +217,10 @@ const handleInputChange = (e) => {
               placeholder="Görev Açıklaması"
               value={newTask.task_description}
               onChange={handleInputChange}
-              className="p-2 border rounded mb-2 w-full"
+              className={`p-2 border rounded mb-2 w-full ${darkMode ? "bg-gray-800 text-white placeholder-gray-400" : "bg-white text-black"}`}
               rows="3"
-            ></textarea>
+            />
+
 
             {/* Tarih + Puan */}
             <div className="flex gap-4 mb-2">
@@ -223,15 +229,15 @@ const handleInputChange = (e) => {
                 type="date"
                 value={newTask.deadline}
                 onChange={handleInputChange}
-                className="p-2 border rounded w-1/2"
+                className={`p-2 border rounded w-1/2 ${darkMode ? "bg-gray-800 text-white placeholder-gray-400" : "bg-white text-black"}`}
               />
               <input
-                name="score"
-                placeholder="Görev Puanı"
-                value={newTask.score}
-                onChange={handleInputChange}
-                className="p-2 border rounded w-1/2"
-              />
+              name="score"
+              placeholder="Görev Puanı"
+              value={newTask.score}
+              onChange={handleInputChange}
+              className={`p-2 border rounded w-1/2 ${darkMode ? "bg-gray-800 text-white placeholder-gray-400" : "bg-white text-black"}`}
+            />
             </div>
 
             {/* Görev Ekle Butonu */}
