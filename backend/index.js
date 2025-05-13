@@ -186,36 +186,6 @@ app.get("/api/messages", async (req, res) => {
   }
 });
 
-app.post("/employees/assign-task", async (req, res) => {
-  const { employee_id, manager_id, task_name, task_description, deadline, score } = req.body;
-
-  try {
-    const result = await pool.query(
-      `INSERT INTO assigned_tasks (employee_id, manager_id, task_name, task_description, deadline, score)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [employee_id, manager_id, task_name, task_description, deadline, score]
-    );
-
-   await pool.query(
-      `INSERT INTO notifications (employee_id, message) VALUES ($1, $2)`,
-      [parseInt(employee_id), `Size "${task_name}" görevi atandı.`]
-    );
-
-    // CANLI BİLDİRİM EMİT ET
-    io.emit("receiveNotification", {
-  employee_id: parseInt(employee_id, 10),
-  message: `Size "${task_name}" görevi atandı.`
-  });
-    res.status(201).json({ message: "Görev başarıyla atandı", task: result.rows[0] });
-  } catch (error) {
-    console.error("Görev atama hatası:", error.message);
-    res.status(500).json({ message: "Sunucu hatası" });
-  }
-});
-
-
-// ======================= NOTIFICATION ============================
 app.get("/api/notifications/:employeeId", async (req, res) => {
   const { employeeId } = req.params;
   try {
@@ -226,6 +196,22 @@ app.get("/api/notifications/:employeeId", async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error("Bildirimler alınamadı:", err.message);
+    res.status(500).json({ message: "Sunucu hatası" });
+  }
+});
+
+app.put("/api/notifications/mark-read", async (req, res) => {
+  const { employeeId } = req.body;
+
+  try {
+    await pool.query(
+      `UPDATE notifications SET is_read = true WHERE employee_id = $1`,
+      [employeeId]
+    );
+
+    res.json({ message: "Bildirimler okundu olarak işaretlendi." });
+  } catch (error) {
+    console.error("Bildirimleri işaretleme hatası:", error.message);
     res.status(500).json({ message: "Sunucu hatası" });
   }
 });
