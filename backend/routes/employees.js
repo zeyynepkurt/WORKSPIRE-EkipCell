@@ -144,6 +144,49 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: "Sunucu hatası." });
   }
 });
+// GET /employees/team/:teamName → Belirli bir ekibe ait çalışanları getir
+router.get("/team/:teamName", async (req, res) => {
+    const { teamName } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT employee_id, name, email, department, phone_number
+             FROM employees
+             WHERE department = $1`,
+            [teamName]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Bu ekibe ait çalışan bulunamadı.' });
+        }
+
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Ekip çalışanlarını getirme hatası:", error);
+        res.status(500).json({ message: 'Sunucu hatası.' });
+    }
+});
+
+// GET /employees/email/:email → Belirli email'e göre çalışanı getir
+router.get("/email/:email", async (req, res) => {
+    const { email } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT employee_id, name, email, department, phone_number, department
+             FROM employees
+             WHERE email = $1`,
+            [email]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Bu e-posta ile eşleşen kullanıcı bulunamadı.' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Email ile çalışan getirme hatası:", error);
+        res.status(500).json({ message: 'Sunucu hatası.' });
+    }
+});
 
 
 module.exports = router;
